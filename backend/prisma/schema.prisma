@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  login        String   @unique
+  passwordHash String
+  phone        String
+  role         String   // 'superadmin', 'admin', 'teacher'
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  
+  groupsAsTeacher Group[] @relation("TeacherGroups")
+  studentsAdded   Student[] @relation("StudentCreator")
+  paymentsAdded   Payment[] @relation("PaymentAdder")
+  cashReports     CashReport[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users     User[]
+  groups    Group[]
+  students  Student[]
+  payments  Payment[]
+  cashReports CashReport[]
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("active") // 'active', 'completed'
+  schedule  Json     // e.g. [{ day: 'mon', startTime: '09:00', type: 'theory' }]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  teacherId String
+  teacher   User     @relation("TeacherGroups", fields: [teacherId], references: [id])
+  
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+
+  students  Student[]
+}
+
+model Student {
+  id                String   @id @default(uuid())
+  firstName         String
+  lastName          String
+  phone             String
+  coursePrice       Float
+  paidAmount        Float    @default(0)
+  status            String   @default("active") // 'active', 'completed', 'stopped'
+  providedDocuments Json?    // e.g. { photo: true, form083: true, passport: true }
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+
+  createdBy String
+  creator   User     @relation("StudentCreator", fields: [createdBy], references: [id])
+
+  payments  Payment[]
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+
+  addedBy   String
+  adder     User     @relation("PaymentAdder", fields: [addedBy], references: [id])
+}
+
+model CashReport {
+  id          String   @id @default(uuid())
+  date        DateTime
+  totalAmount Float
+  status      String   @default("pending") // 'pending', 'approved', 'rejected'
+  createdAt   DateTime @default(now())
+
+  // Relations
+  addedBy     String
+  adder       User     @relation(fields: [addedBy], references: [id])
+
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String?
+  userId    String?
+  userName  String
+  branchId  String?
+  createdAt DateTime @default(now())
+}

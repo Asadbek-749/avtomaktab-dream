@@ -1,0 +1,505 @@
+import React, { useEffect, useState } from 'react';
+import { IconPlus, IconSearch, IconEdit, IconTrash, IconDownload, IconCash, IconFileCheck } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+import { useStudentStore } from '../../../store/studentStore';
+import { useGroupStore } from '../../../store/groupStore';
+import { useBranchStore } from '../../../store/branchStore';
+import { usePaymentStore } from '../../../store/paymentStore';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from '../../../components/ui/Table';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
+import { exportToCSV } from '../../../utils/export';
+import { Modal } from '../../../components/ui/Modal';
+import { IconMessageCircle, IconCheck } from '@tabler/icons-react';
+import { useForm as useRHForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuthStore } from '../../../store/authStore';
+
+const studentSchema = z.object({
+  firstName: z.string().min(2, "Ism kiritilishi shart"),
+  lastName: z.string().min(2, "Familiya kiritilishi shart"),
+  phone: z.string().min(9, "Telefon kiritilishi shart"),
+  branchId: z.string().optional(),
+  groupId: z.string().min(1, "Guruh tanlang"),
+  coursePrice: z.number().min(100000, "Kurs narxi kiritilishi shart"),
+  providedDocuments: z.object({
+    photo: z.boolean().default(false),
+    form083: z.boolean().default(false),
+    passport: z.boolean().default(false)
+  }).optional()
+});
+
+type StudentForm = z.infer<typeof studentSchema>;
+
+export const StudentsPage = () => {
+  const { students, fetchStudents, addStudent, updateStudent } = useStudentStore();
+  const { groups, fetchGroups } = useGroupStore();
+  const { branches, fetchBranches, activeBranchId } = useBranchStore();
+  const { addPayment } = usePaymentStore();
+  const user = useAuthStore(state => state.user);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  const [simulatedSMS, setSimulatedSMS] = useState<Record<string, 'sending' | 'sent'>>({});
+  const [isBulkSending, setIsBulkSending] = useState(false);
+
+  const { register, handleSubmit, reset, control, formState: { errors } } = useRHForm<StudentForm>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
+      coursePrice: 1500000, // Default narx
+      branchId: user?.role === 'superadmin' ? '' : user?.branchId
+    }
+  });
+
+  const selectedFormBranch = useWatch({
+    control,
+    name: 'branchId',
+    defaultValue: user?.role === 'superadmin' ? '' : user?.branchId
+  });
+
+  const availableGroups = groups.filter(g => 
+    user?.role === 'superadmin' ? g.branchId === selectedFormBranch : g.branchId === user?.branchId
+  );
+
+  useEffect(() => {
+    fetchStudents();
+    fetchGroups();
+    fetchBranches();
+  }, [fetchStudents, fetchGroups, fetchBranches]);
+
+  const onSubmit = (data: StudentForm) => {
+    if (user) {
+      const selectedGroup = groups.find(g => g.id === data.groupId);
+      
+      if (editingStudent) {
+        updateStudent(editingStudent.id, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          groupId: data.groupId,
+          branchId: selectedGroup?.branchId || user.branchId || '',
+          coursePrice: data.coursePrice,
+          providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
+        });
+      } else {
+        addStudent({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          groupId: data.groupId,
+          branchId: selectedGroup?.branchId || user.branchId || '',
+          coursePrice: data.coursePrice,
+          paidAmount: 0,
+          status: 'active',
+          providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
+          documents: [],
+          examResults: [],
+          createdBy: user.id
+        });
+      }
+      
+      setIsModalOpen(false);
+      setEditingStudent(null);
+      reset();
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setEditingStudent(null);
+    reset({
+      firstName: '',
+      lastName: '',
+      phone: '',
+      groupId: '',
+      coursePrice: 1500000,
+      branchId: user?.role === 'superadmin' ? '' : user?.branchId,
+      providedDocuments: { photo: false, form083: false, passport: false }
+    });
+    setIsModalOpen(false);
+    setTimeout(() => setIsModalOpen(true), 0);
+  };
+
+  const handleEditStudent = (student: any) => {
+    setEditingStudent(student);
+    reset({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      phone: student.phone,
+      groupId: student.groupId,
+      coursePrice: student.coursePrice,
+      branchId: student.branchId,
+      providedDocuments: student.providedDocuments || { photo: false, form083: false, passport: false }
+    });
+    setIsModalOpen(true);
+  };
+
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = Number(paymentAmount);
+    
+    if (selectedStudentForPayment && amount > 0 && user) {
+      const currentDebt = selectedStudentForPayment.coursePrice - selectedStudentForPayment.paidAmount;
+      
+      if (amount > currentDebt) {
+        alert(`Kiritilgan summa qarzdorlikdan (${currentDebt.toLocaleString()} so'm) oshib ketishi mumkin emas!`);
+        return;
+      }
+
+      addPayment({
+        studentId: selectedStudentForPayment.id,
+        amount: amount,
+        date: new Date().toISOString(),
+        note: 'Dars uchun to\'lov',
+        branchId: selectedStudentForPayment.branchId,
+        addedBy: user.id
+      }, user.name);
+      
+      setPaymentModalOpen(false);
+      setPaymentAmount('');
+      setSelectedStudentForPayment(null);
+    }
+  };
+  const displayBranchId = user?.role === 'superadmin' ? activeBranchId : user?.branchId;
+
+  const filteredStudents = students.filter(student => {
+    const matchSearch = student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        student.lastName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchBranch = displayBranchId ? student.branchId === displayBranchId : true;
+    const matchStatus = student.status !== 'completed';
+    return matchSearch && matchBranch && matchStatus;
+  });
+
+  const getGroupName = (id: string) => {
+    const group = groups.find(g => g.id === id);
+    return group ? group.name : 'Noma\'lum';
+  };
+
+  const handleExport = () => {
+    const exportData = filteredStudents.map(s => ({
+      'Ism': s.firstName,
+      'Familiya': s.lastName,
+      'Telefon': s.phone,
+      'Guruh': getGroupName(s.groupId),
+      'Kurs Narxi': s.coursePrice,
+      'To\'langan': s.paidAmount,
+      'Qarzdorlik': s.coursePrice - s.paidAmount,
+      'Holati': s.status
+    }));
+    exportToCSV(exportData, `Oquvchilar_${new Date().toISOString().split('T')[0]}`);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full">Faol</span>;
+      case 'completed':
+        return <span className="px-2 py-1 bg-accent/10 text-accent text-xs rounded-full">Tugatgan</span>;
+      case 'stopped':
+        return <span className="px-2 py-1 bg-danger/10 text-danger text-xs rounded-full">To'xtatilgan</span>;
+      default:
+        return null;
+    }
+  };
+
+  const handleSendSMS = (studentId: string) => {
+    setSimulatedSMS(prev => ({ ...prev, [studentId]: 'sending' }));
+    setTimeout(() => {
+      setSimulatedSMS(prev => ({ ...prev, [studentId]: 'sent' }));
+    }, 1500);
+  };
+
+  const handleBulkSMS = () => {
+    const studentsWithDebt = filteredStudents.filter(s => (s.coursePrice - s.paidAmount) > 0);
+    if (studentsWithDebt.length === 0) {
+      alert("Hozirda qarzdor o'quvchilar yo'q.");
+      return;
+    }
+    
+    setIsBulkSending(true);
+    
+    // Simulate bulk sending
+    studentsWithDebt.forEach(s => {
+      setSimulatedSMS(prev => ({ ...prev, [s.id]: 'sending' }));
+    });
+    
+    setTimeout(() => {
+      studentsWithDebt.forEach(s => {
+        setSimulatedSMS(prev => ({ ...prev, [s.id]: 'sent' }));
+      });
+      setIsBulkSending(false);
+      alert(`${studentsWithDebt.length} ta qarzdor o'quvchiga SMS yuborildi!`);
+    }, 2500);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary">O'quvchilar</h2>
+          <p className="text-text-muted">Barcha o'quvchilarni boshqarish</p>
+        </div>
+        <div className="flex gap-2 flex-wrap justify-end">
+          <Button variant="outline" className="gap-2 border-accent text-accent hover:bg-accent hover:text-white" onClick={handleBulkSMS} disabled={isBulkSending}>
+            <IconMessageCircle size={18} />
+            {isBulkSending ? "Yuborilmoqda..." : "Qarzdorlarga SMS (Barchaga)"}
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <IconDownload size={18} />
+            Eksport (CSV)
+          </Button>
+          <Button className="gap-2" onClick={handleOpenAddModal}>
+            <IconPlus size={18} />
+            O'quvchi qo'shish
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex justify-between items-center">
+            <CardTitle>Ro'yxat</CardTitle>
+            <div className="relative w-64">
+              <IconSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Input
+                placeholder="Qidiruv..."
+                className="pl-10 h-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ism va familiya</TableHead>
+                <TableHead>Telefon</TableHead>
+                <TableHead>Guruh</TableHead>
+                <TableHead>Qarzdorlik</TableHead>
+                <TableHead>Holati</TableHead>
+                <TableHead className="text-right">Amallar</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-text-muted">
+                    Ma'lumot topilmadi
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStudents.map((student, i) => (
+                  <TableRow key={student.id} transition={{ delay: i * 0.05 }}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {student.firstName} {student.lastName}
+                        {student.providedDocuments && student.providedDocuments.photo && student.providedDocuments.form083 && student.providedDocuments.passport && (
+                          <span title="Barcha hujjatlar topshirilgan" className="text-success"><IconFileCheck size={16}/></span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{student.phone}</TableCell>
+                    <TableCell>{getGroupName(student.groupId)}</TableCell>
+                    <TableCell className="font-medium text-danger">
+                      {(student.coursePrice - student.paidAmount).toLocaleString()} so'm
+                    </TableCell>
+                    <TableCell>{getStatusBadge(student.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {student.coursePrice - student.paidAmount > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-8 h-8 p-0 border-success/20 text-success hover:bg-success hover:text-white"
+                            title="To'lov kiritish"
+                            onClick={() => {
+                              setSelectedStudentForPayment(student);
+                              setPaymentModalOpen(true);
+                            }}
+                          >
+                            <IconCash size={16} />
+                          </Button>
+                        )}
+                        {student.coursePrice - student.paidAmount > 0 && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-8 h-8 p-0 border-accent/20 text-accent hover:bg-accent hover:text-white"
+                            title="Qarz haqida SMS yuborish"
+                            onClick={() => handleSendSMS(student.id)}
+                            disabled={simulatedSMS[student.id] === 'sending'}
+                          >
+                            {simulatedSMS[student.id] === 'sending' ? (
+                              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full" />
+                            ) : simulatedSMS[student.id] === 'sent' ? (
+                              <IconCheck size={16} className="text-success" />
+                            ) : (
+                              <IconMessageCircle size={16} />
+                            )}
+                          </Button>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-8 h-8 p-0"
+                          onClick={() => handleEditStudent(student)}
+                        >
+                          <IconEdit size={16} />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-8 h-8 p-0 border-danger/20 text-danger hover:bg-danger hover:text-white"
+                        >
+                          <IconTrash size={16} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingStudent(null); }} title={editingStudent ? "O'quvchi ma'lumotlarini tahrirlash" : "Yangi o'quvchi qo'shish"}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Ism" placeholder="O'quvchi ismi" error={errors.firstName?.message} {...register('firstName')} />
+            <Input label="Familiya" placeholder="O'quvchi familiyasi" error={errors.lastName?.message} {...register('lastName')} />
+          </div>
+          
+          <Input label="Telefon" placeholder="+998901234567" error={errors.phone?.message} {...register('phone')} />
+          
+          {user?.role === 'superadmin' && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary">Filialni tanlang</label>
+              <select 
+                className={`w-full bg-bg-base border ${errors.branchId ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
+                {...register('branchId')}
+              >
+                <option value="">Filialni tanlang</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-primary">Guruhni tanlang</label>
+            <select 
+              className={`w-full bg-bg-base border ${errors.groupId ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
+              {...register('groupId')}
+              disabled={!selectedFormBranch && user?.role === 'superadmin'}
+            >
+              <option value="">Guruhni tanlang</option>
+              {availableGroups.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            {errors.groupId && <span className="text-xs text-danger mt-1">{errors.groupId.message}</span>}
+          </div>
+
+          <Input 
+            label="Jami kurs narxi (so'm)" 
+            type="number" 
+            placeholder="1500000" 
+            error={errors.coursePrice?.message} 
+            {...register('coursePrice', { valueAsNumber: true })} 
+          />
+
+          <div className="flex flex-col gap-1.5 mt-2">
+            <label className="text-sm font-medium text-text-primary">Topshirilgan hujjatlar</label>
+            <div className="flex flex-wrap gap-4 mt-1">
+              <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  {...register('providedDocuments.photo')} 
+                  className="w-4 h-4 text-accent border-border rounded focus:ring-accent"
+                />
+                3x4 rasm
+              </label>
+              <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  {...register('providedDocuments.form083')} 
+                  className="w-4 h-4 text-accent border-border rounded focus:ring-accent"
+                />
+                083-shakl
+              </label>
+              <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  {...register('providedDocuments.passport')} 
+                  className="w-4 h-4 text-accent border-border rounded focus:ring-accent"
+                />
+                Pasport nusxasi
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" type="button" onClick={() => { setIsModalOpen(false); setEditingStudent(null); }}>Bekor qilish</Button>
+            <Button type="submit">{editingStudent ? "Saqlash" : "Qo'shish"}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} title="To'lov kiritish">
+        <form onSubmit={handlePaymentSubmit} className="space-y-4">
+          {selectedStudentForPayment && (
+            <div className="mb-4 p-4 rounded-lg bg-bg-hover">
+              <p className="font-medium text-text-primary">{selectedStudentForPayment.firstName} {selectedStudentForPayment.lastName}</p>
+              <div className="flex justify-between mt-2 text-sm">
+                <span className="text-text-secondary">Qarzdorlik:</span>
+                <span className="font-bold text-danger">{(selectedStudentForPayment.coursePrice - selectedStudentForPayment.paidAmount).toLocaleString()} so'm</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-primary">To'lov summasi (so'm)</label>
+            <Input 
+              type="number" 
+              placeholder="Masalan: 500000" 
+              value={paymentAmount}
+              max={selectedStudentForPayment ? selectedStudentForPayment.coursePrice - selectedStudentForPayment.paidAmount : undefined}
+              onChange={(e) => setPaymentAmount(e.target.value ? Number(e.target.value) : '')}
+              required
+            />
+            {selectedStudentForPayment && Number(paymentAmount) > (selectedStudentForPayment.coursePrice - selectedStudentForPayment.paidAmount) && (
+              <span className="text-xs text-danger">Summa qarz miqdoridan oshmasligi kerak!</span>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button variant="outline" type="button" onClick={() => setPaymentModalOpen(false)}>Bekor qilish</Button>
+            <Button 
+              type="submit" 
+              disabled={
+                !paymentAmount || 
+                Number(paymentAmount) <= 0 || 
+                (selectedStudentForPayment && Number(paymentAmount) > (selectedStudentForPayment.coursePrice - selectedStudentForPayment.paidAmount))
+              }
+            >
+              To'lovni tasdiqlash
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </motion.div>
+  );
+};
+
+export default StudentsPage;
