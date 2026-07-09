@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { Student, Group, Payment, User, ActivityLog, CashReport, Branch, Attendance } from '../types';
 
-const API_URL = 'http://localhost:5000/api';
+// const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://194.99.22.218:5000/api';
 
 const apiInstance = axios.create({
   baseURL: API_URL
