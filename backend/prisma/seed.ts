@@ -11,7 +11,7 @@ async function main() {
   }
 
   const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash('123', salt);
+  const passwordHash = await bcrypt.hash('admin!@#123', salt);
 
   const superadmin = await prisma.user.create({
     data: {
