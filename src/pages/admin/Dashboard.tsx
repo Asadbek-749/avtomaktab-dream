@@ -18,7 +18,54 @@ export const AdminDashboard = () => {
   }, [fetchStudents, fetchPayments, fetchGroups]);
 
   const activeStudents = students.filter(s => s.status === 'active').length;
-  const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
+  
+  // Calculate trends
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+  // Revenue calculation
+  const revenueThisMonth = payments
+    .filter(p => {
+      const d = new Date(p.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  const revenueLastMonth = payments
+    .filter(p => {
+      const d = new Date(p.date);
+      return d.getMonth() === previousMonth && d.getFullYear() === previousYear;
+    })
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
+  let revenueTrend = 0;
+  if (revenueLastMonth > 0) {
+    revenueTrend = ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100;
+  } else if (revenueThisMonth > 0) {
+    revenueTrend = 100;
+  }
+
+  // Active students trend (new students this month vs last month)
+  const newStudentsThisMonth = students.filter(s => {
+    const d = new Date(s.createdAt);
+    return s.status === 'active' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+
+  const newStudentsLastMonth = students.filter(s => {
+    const d = new Date(s.createdAt);
+    return s.status === 'active' && d.getMonth() === previousMonth && d.getFullYear() === previousYear;
+  }).length;
+
+  let studentTrend = 0;
+  if (newStudentsLastMonth > 0) {
+    studentTrend = ((newStudentsThisMonth - newStudentsLastMonth) / newStudentsLastMonth) * 100;
+  } else if (newStudentsThisMonth > 0) {
+    studentTrend = 100;
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -51,7 +98,7 @@ export const AdminDashboard = () => {
             title="Faol o'quvchilar"
             value={activeStudents}
             icon={IconUsers}
-            trend={{ value: 12, isPositive: true }}
+            trend={{ value: Number(studentTrend.toFixed(1)), isPositive: studentTrend >= 0 }}
           />
         </motion.div>
         
@@ -66,9 +113,9 @@ export const AdminDashboard = () => {
         <motion.div variants={itemVariants}>
           <StatCard
             title="Oylik tushum"
-            value={`${totalRevenue.toLocaleString()} so'm`}
+            value={`${revenueThisMonth.toLocaleString()} so'm`}
             icon={IconCreditCard}
-            trend={{ value: 8.5, isPositive: true }}
+            trend={{ value: Number(revenueTrend.toFixed(1)), isPositive: revenueTrend >= 0 }}
           />
         </motion.div>
         
