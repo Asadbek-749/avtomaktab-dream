@@ -117,6 +117,23 @@ class ApiService {
   async getAttendances(): Promise<Attendance[]> {
     return [];
   }
+
+  // --- Driving Lessons ---
+  async getDrivingLessons(params?: { studentId?: string; instructorId?: string }): Promise<any[]> {
+    const res = await apiInstance.get('/driving-lessons', { params });
+    return res.data;
+  }
+  async addDrivingLesson(data: any): Promise<any> {
+    const res = await apiInstance.post('/driving-lessons', data);
+    return res.data;
+  }
+  async updateDrivingLesson(id: string, data: any): Promise<any> {
+    const res = await apiInstance.put(`/driving-lessons/${id}`, data);
+    return res.data;
+  }
+  async deleteDrivingLesson(id: string): Promise<void> {
+    await apiInstance.delete(`/driving-lessons/${id}`);
+  }
 }
 
 export const api = new ApiService();

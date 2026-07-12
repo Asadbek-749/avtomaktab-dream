@@ -23,6 +23,12 @@ import { TeacherDashboard } from '../pages/teacher/Dashboard';
 import { MyGroups } from '../pages/teacher/MyGroups';
 import { MySchedule } from '../pages/teacher/MySchedule';
 
+import { InstructorsPage } from '../pages/admin/InstructorsPage';
+
+import { InstructorDashboard } from '../pages/instructor/InstructorDashboard';
+import { InstructorStudents } from '../pages/instructor/InstructorStudents';
+import { InstructorLessons } from '../pages/instructor/InstructorLessons';
+
 // Protected Route wrapper that checks role
 const RoleRoute = ({ allowedRoles, children }: { allowedRoles: string[], children: React.ReactNode }) => {
   const user = useAuthStore(state => state.user);
@@ -69,6 +75,7 @@ export const AppRouter = () => {
           <Route path="archive" element={<RoleRoute allowedRoles={['superadmin']}><ArchivePage /></RoleRoute>} />
           <Route path="analytics" element={<RoleRoute allowedRoles={['superadmin']}><AnalyticsPage /></RoleRoute>} />
           <Route path="reports" element={<RoleRoute allowedRoles={['superadmin']}><AttendanceReportsPage /></RoleRoute>} />
+          <Route path="instructors" element={<RoleRoute allowedRoles={['superadmin']}><InstructorsPage /></RoleRoute>} />
         </Route>
         
         {/* Admin Routes */}
@@ -81,6 +88,7 @@ export const AppRouter = () => {
           <Route path="archive" element={<RoleRoute allowedRoles={['admin']}><ArchivePage /></RoleRoute>} />
           <Route path="schedule" element={<RoleRoute allowedRoles={['admin']}><SchedulePage /></RoleRoute>} />
           <Route path="reports" element={<RoleRoute allowedRoles={['admin']}><AttendanceReportsPage /></RoleRoute>} />
+          <Route path="instructors" element={<RoleRoute allowedRoles={['admin']}><InstructorsPage /></RoleRoute>} />
         </Route>
         
         {/* Teacher Routes */}
@@ -88,6 +96,13 @@ export const AppRouter = () => {
           <Route path="dashboard" element={<RoleRoute allowedRoles={['teacher']}><TeacherDashboard /></RoleRoute>} />
           <Route path="groups" element={<RoleRoute allowedRoles={['teacher']}><MyGroups /></RoleRoute>} />
           <Route path="schedule" element={<RoleRoute allowedRoles={['teacher']}><MySchedule /></RoleRoute>} />
+        </Route>
+
+        {/* Instructor Routes */}
+        <Route path="instructor">
+          <Route path="dashboard" element={<RoleRoute allowedRoles={['instructor']}><InstructorDashboard /></RoleRoute>} />
+          <Route path="students" element={<RoleRoute allowedRoles={['instructor']}><InstructorStudents /></RoleRoute>} />
+          <Route path="lessons" element={<RoleRoute allowedRoles={['instructor']}><InstructorLessons /></RoleRoute>} />
         </Route>
       </Route>
       

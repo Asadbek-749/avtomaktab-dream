@@ -13,8 +13,14 @@ model User {
   login        String   @unique
   passwordHash String
   phone        String
-  role         String   // 'superadmin', 'admin', 'teacher'
+  role         String   // 'superadmin', 'admin', 'teacher', 'instructor'
   isActive     Boolean  @default(true)
+  
+  // Fields for Instructor role
+  carModel     String?
+  carNumber    String?
+  transmission String?  // 'manual', 'auto'
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -26,6 +32,9 @@ model User {
   studentsAdded   Student[] @relation("StudentCreator")
   paymentsAdded   Payment[] @relation("PaymentAdder")
   cashReports     CashReport[]
+  
+  studentsAsInstructor Student[] @relation("StudentInstructor")
+  drivingLessons       DrivingLesson[] @relation("InstructorLessons")
 }
 
 model Branch {
@@ -70,6 +79,11 @@ model Student {
   paidAmount        Float    @default(0)
   status            String   @default("active") // 'active', 'completed', 'stopped'
   providedDocuments Json?    // e.g. { photo: true, form083: true, passport: true }
+  
+  drivingHoursRequired Float    @default(20)
+  drivingHoursDone     Float    @default(0)
+  transmissionPreference String? // 'manual', 'auto'
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -83,7 +97,11 @@ model Student {
   createdBy String
   creator   User     @relation("StudentCreator", fields: [createdBy], references: [id])
 
+  instructorId String?
+  instructor   User?    @relation("StudentInstructor", fields: [instructorId], references: [id])
+
   payments  Payment[]
+  drivingLessons DrivingLesson[]
 }
 
 model Payment {
@@ -127,4 +145,22 @@ model ActivityLog {
   userName  String
   branchId  String?
   createdAt DateTime @default(now())
+}
+
+model DrivingLesson {
+  id          String   @id @default(uuid())
+  date        DateTime
+  startTime   String   // '14:00'
+  endTime     String   // '16:00'
+  hours       Float
+  status      String   @default("completed") // 'scheduled', 'completed', 'cancelled'
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  instructorId String
+  instructor   User     @relation("InstructorLessons", fields: [instructorId], references: [id])
 }

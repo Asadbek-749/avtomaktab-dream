@@ -22,6 +22,7 @@ import groupRoutes from './routes/groups';
 import studentRoutes from './routes/students';
 import paymentRoutes from './routes/payments';
 import logsRoutes from './routes/logs';
+import drivingLessonRoutes from './routes/driving-lessons';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -31,6 +32,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/driving-lessons', drivingLessonRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {

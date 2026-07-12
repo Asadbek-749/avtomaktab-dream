@@ -1,4 +1,4 @@
-export type Role = 'superadmin' | 'admin' | 'teacher';
+export type Role = 'superadmin' | 'admin' | 'teacher' | 'instructor';
 
 export interface Branch {
   id: string;
@@ -15,6 +15,9 @@ export interface User {
   role: Role;
   branchId?: string; // Optional for superadmin, required for others
   password?: string;
+  carModel?: string;
+  carNumber?: string;
+  transmission?: string; // 'manual' or 'auto'
   createdAt: string;
   isActive: boolean;
 }
@@ -43,6 +46,7 @@ export interface Student {
   phone: string;
   groupId: string;
   branchId: string;
+  instructorId?: string;
   coursePrice: number;
   paidAmount: number;
   status: 'active' | 'completed' | 'stopped';
@@ -51,6 +55,9 @@ export interface Student {
     form083: boolean;
     passport: boolean;
   };
+  drivingHoursRequired: number;
+  drivingHoursDone: number;
+  transmissionPreference?: string;
   examResults: ExamResult[];
   documents: Document[];
   createdAt: string;
@@ -115,4 +122,19 @@ export interface Attendance {
   records: AttendanceRecord[];
   teacherId: string;
   createdAt: string;
+}
+
+export interface DrivingLesson {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  notes?: string;
+  studentId: string;
+  instructorId: string;
+  createdAt: string;
+  student?: { firstName: string; lastName: string };
+  instructor?: { name: string };
 }

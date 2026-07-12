@@ -5,6 +5,8 @@ import { useStudentStore } from '../../../store/studentStore';
 import { useGroupStore } from '../../../store/groupStore';
 import { useBranchStore } from '../../../store/branchStore';
 import { usePaymentStore } from '../../../store/paymentStore';
+import { api } from '../../../services/api';
+import { User } from '../../../types';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { 
@@ -26,6 +28,8 @@ const studentSchema = z.object({
   branchId: z.string().optional(),
   groupId: z.string().min(1, "Guruh tanlang"),
   coursePrice: z.number().min(100000, "Kurs narxi kiritilishi shart"),
+  instructorId: z.string().optional(),
+  transmissionPreference: z.string().optional(),
   providedDocuments: z.object({
     photo: z.boolean().default(false),
     form083: z.boolean().default(false),
@@ -50,6 +54,7 @@ export const StudentsPage = () => {
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
   const [simulatedSMS, setSimulatedSMS] = useState<Record<string, 'sending' | 'sent'>>({});
   const [isBulkSending, setIsBulkSending] = useState(false);
+  const [instructors, setInstructors] = useState<User[]>([]);
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useRHForm<StudentForm>({
     resolver: zodResolver(studentSchema),
@@ -73,6 +78,10 @@ export const StudentsPage = () => {
     fetchStudents();
     fetchGroups();
     fetchBranches();
+    // Fetch instructors
+    api.getUsers().then(users => {
+      setInstructors(users.filter(u => u.role === 'instructor'));
+    }).catch(console.error);
   }, [fetchStudents, fetchGroups, fetchBranches]);
 
   const onSubmit = (data: StudentForm) => {
@@ -85,6 +94,8 @@ export const StudentsPage = () => {
           lastName: data.lastName,
           phone: data.phone,
           groupId: data.groupId,
+          instructorId: data.instructorId || null,
+          transmissionPreference: data.transmissionPreference || null,
           branchId: selectedGroup?.branchId || user.branchId || '',
           coursePrice: data.coursePrice,
           providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
@@ -95,10 +106,14 @@ export const StudentsPage = () => {
           lastName: data.lastName,
           phone: data.phone,
           groupId: data.groupId,
+          instructorId: data.instructorId || null,
+          transmissionPreference: data.transmissionPreference || null,
           branchId: selectedGroup?.branchId || user.branchId || '',
           coursePrice: data.coursePrice,
           paidAmount: 0,
           status: 'active',
+          drivingHoursRequired: 20,
+          drivingHoursDone: 0,
           providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
           documents: [],
           examResults: [],
@@ -121,6 +136,8 @@ export const StudentsPage = () => {
       groupId: '',
       coursePrice: 1500000,
       branchId: user?.role === 'superadmin' ? '' : user?.branchId,
+      instructorId: '',
+      transmissionPreference: 'manual',
       providedDocuments: { photo: false, form083: false, passport: false }
     });
     setIsModalOpen(false);
@@ -136,6 +153,8 @@ export const StudentsPage = () => {
       groupId: student.groupId,
       coursePrice: student.coursePrice,
       branchId: student.branchId,
+      instructorId: student.instructorId || '',
+      transmissionPreference: student.transmissionPreference || 'manual',
       providedDocuments: student.providedDocuments || { photo: false, form083: false, passport: false }
     });
     setIsModalOpen(true);
@@ -409,6 +428,31 @@ export const StudentsPage = () => {
               ))}
             </select>
             {errors.groupId && <span className="text-xs text-danger mt-1">{errors.groupId.message}</span>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary">Instruktor (Ixtiyoriy)</label>
+              <select 
+                className={`w-full bg-bg-base border ${errors.instructorId ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
+                {...register('instructorId')}
+              >
+                <option value="">Tanlanmagan</option>
+                {instructors.filter(i => user?.role === 'superadmin' ? (selectedFormBranch ? i.branchId === selectedFormBranch : true) : i.branchId === user?.branchId).map(i => (
+                  <option key={i.id} value={i.id}>{i.name} ({i.carModel} - {i.transmission === 'auto' ? 'Avtomat' : 'Mexanika'})</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-text-primary">Korobka (Xohish)</label>
+              <select 
+                className={`w-full bg-bg-base border ${errors.transmissionPreference ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
+                {...register('transmissionPreference')}
+              >
+                <option value="manual">Mexanika</option>
+                <option value="auto">Avtomat</option>
+              </select>
+            </div>
           </div>
 
           <Input 

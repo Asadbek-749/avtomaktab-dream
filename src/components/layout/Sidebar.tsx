@@ -31,6 +31,7 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
     ...(user?.role === 'admin' ? [
       { name: 'O\'quvchilar', path: '/admin/students', icon: IconUsers },
       { name: 'Guruhlar', path: '/admin/groups', icon: IconBooks },
+      { name: 'Instruktorlar', path: '/admin/instructors', icon: IconBuildingCommunity }, // Reusing icon or better IconSteeringWheel if we had it, let's use IconUsers for now or add new. Let's use IconSettings for now or IconChartBar
       { name: 'To\'lovlar', path: '/admin/payments', icon: IconCreditCard },
       { name: 'Hujjatlar', path: '/admin/documents', icon: IconFileAlert },
       { name: 'Jadval', path: '/admin/schedule', icon: IconCalendarEvent },
@@ -39,6 +40,7 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
     ] : []),
     ...(user?.role === 'superadmin' ? [
       { name: 'Filiallar', path: '/superadmin/branches', icon: IconBuildingCommunity },
+      { name: 'Instruktorlar', path: '/superadmin/instructors', icon: IconUsers },
       { name: 'Analitika', path: '/superadmin/analytics', icon: IconChartBar },
       { name: 'Moliya', path: '/superadmin/finance', icon: IconCash },
       { name: 'Hujjatlar', path: '/superadmin/documents', icon: IconFileAlert },
@@ -50,6 +52,10 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
     ...(user?.role === 'teacher' ? [
       { name: 'Mening guruhlarim', path: '/teacher/groups', icon: IconBooks },
       { name: 'Mening jadvalim', path: '/teacher/schedule', icon: IconCalendarEvent },
+    ] : []),
+    ...(user?.role === 'instructor' ? [
+      { name: 'Mening o\'quvchilarim', path: '/instructor/students', icon: IconUsers },
+      { name: 'Haydash darslari', path: '/instructor/lessons', icon: IconCalendarEvent },
     ] : [])
   ];
 

@@ -11,7 +11,9 @@ router.get('/', async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, createdAt: true, updatedAt: true
+        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, 
+        carModel: true, carNumber: true, transmission: true,
+        createdAt: true, updatedAt: true
       }
     });
     res.json(users);
@@ -22,7 +24,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', authorize('superadmin'), async (req, res) => {
   try {
-    const { name, login, phone, role, branchId, password } = req.body;
+    const { name, login, phone, role, branchId, password, carModel, carNumber, transmission } = req.body;
     
     const exists = await prisma.user.findUnique({ where: { login } });
     if (exists) return res.status(400).json({ message: 'Login already exists' });
@@ -32,10 +34,13 @@ router.post('/', authorize('superadmin'), async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        name, login, phone, role, branchId: branchId || null, passwordHash, isActive: true
+        name, login, phone, role, branchId: branchId || null, passwordHash, isActive: true,
+        carModel, carNumber, transmission
       },
       select: {
-        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, createdAt: true, updatedAt: true
+        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, 
+        carModel: true, carNumber: true, transmission: true,
+        createdAt: true, updatedAt: true
       }
     });
 
@@ -47,9 +52,9 @@ router.post('/', authorize('superadmin'), async (req, res) => {
 
 router.put('/:id', authorize('superadmin'), async (req, res) => {
   try {
-    const { name, login, phone, role, branchId, password, isActive } = req.body;
+    const { name, login, phone, role, branchId, password, isActive, carModel, carNumber, transmission } = req.body;
     
-    let updateData: any = { name, login, phone, role, branchId, isActive };
+    let updateData: any = { name, login, phone, role, branchId, isActive, carModel, carNumber, transmission };
     
     if (password) {
       const salt = await bcrypt.genSalt(10);
@@ -60,7 +65,9 @@ router.put('/:id', authorize('superadmin'), async (req, res) => {
       where: { id: req.params.id as string },
       data: updateData,
       select: {
-        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, createdAt: true, updatedAt: true
+        id: true, name: true, login: true, phone: true, role: true, branchId: true, isActive: true, 
+        carModel: true, carNumber: true, transmission: true,
+        createdAt: true, updatedAt: true
       }
     });
 
