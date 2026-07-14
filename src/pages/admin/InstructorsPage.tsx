@@ -4,6 +4,8 @@ import { User, Branch } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { IconPlus, IconEdit, IconTrash, IconCar } from '@tabler/icons-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 
 export const InstructorsPage = () => {
   const { user: currentUser } = useAuthStore();
@@ -167,68 +169,97 @@ export const InstructorsPage = () => {
         ))}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-bg-card border border-border w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">{editingInstructor ? 'Tahrirlash' : 'Yangi Instruktor'}</h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Ism Familiya</label>
-                <input required type="text" className="w-full input-field" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Login</label>
-                  <input required type="text" className="w-full input-field" value={formData.login} onChange={e => setFormData({...formData, login: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Parol {editingInstructor && '(ixtiyoriy)'}</label>
-                  <input required={!editingInstructor} type="text" className="w-full input-field" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Telefon</label>
-                <input required type="text" className="w-full input-field" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mashina rusumi</label>
-                  <input placeholder="Cobalt" required type="text" className="w-full input-field" value={formData.carModel} onChange={e => setFormData({...formData, carModel: e.target.value})} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Davlat raqami</label>
-                  <input placeholder="01 A 777 AA" required type="text" className="w-full input-field" value={formData.carNumber} onChange={e => setFormData({...formData, carNumber: e.target.value})} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Korobka turi</label>
-                <select className="w-full input-field" value={formData.transmission} onChange={e => setFormData({...formData, transmission: e.target.value})}>
-                  <option value="manual">Mexanika</option>
-                  <option value="auto">Avtomat</option>
-                </select>
-              </div>
-
-              {currentUser?.role === 'superadmin' && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Filial</label>
-                  <select required className="w-full input-field" value={formData.branchId} onChange={e => setFormData({...formData, branchId: e.target.value})}>
-                    <option value="">Filialni tanlang</option>
-                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Bekor qilish</Button>
-                <Button type="submit">Saqlash</Button>
-              </div>
-            </form>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingInstructor ? 'Tahrirlash' : 'Yangi Instruktor'}>
+        <form onSubmit={handleSubmit} className="space-y-5 py-2">
+          <Input 
+            label="Ism Familiya" 
+            required 
+            type="text" 
+            placeholder="Asadbek Shodiyev"
+            value={formData.name} 
+            onChange={e => setFormData({...formData, name: e.target.value})} 
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Login" 
+              required 
+              type="text" 
+              placeholder="asadbek001"
+              value={formData.login} 
+              onChange={e => setFormData({...formData, login: e.target.value})} 
+            />
+            <Input 
+              label={`Parol ${editingInstructor ? '(ixtiyoriy)' : ''}`}
+              required={!editingInstructor} 
+              type="text" 
+              placeholder={editingInstructor ? 'O\'zgartirish uchun yozing' : '********'}
+              value={formData.password} 
+              onChange={e => setFormData({...formData, password: e.target.value})} 
+            />
           </div>
-        </div>
-      )}
+          
+          <Input 
+            label="Telefon raqam" 
+            required 
+            type="text" 
+            placeholder="+998901234567"
+            value={formData.phone} 
+            onChange={e => setFormData({...formData, phone: e.target.value})} 
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Mashina rusumi" 
+              required 
+              type="text" 
+              placeholder="Cobalt"
+              value={formData.carModel} 
+              onChange={e => setFormData({...formData, carModel: e.target.value})} 
+            />
+            <Input 
+              label="Davlat raqami" 
+              required 
+              type="text" 
+              placeholder="01 A 777 AA"
+              value={formData.carNumber} 
+              onChange={e => setFormData({...formData, carNumber: e.target.value})} 
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-sm font-medium text-text-primary ml-1">Korobka turi</label>
+            <select 
+              className="w-full bg-white dark:bg-gray-900 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/50 transition-all shadow-sm"
+              value={formData.transmission} 
+              onChange={e => setFormData({...formData, transmission: e.target.value})}
+            >
+              <option value="manual">Mexanika</option>
+              <option value="auto">Avtomat</option>
+            </select>
+          </div>
+
+          {currentUser?.role === 'superadmin' && (
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-sm font-medium text-text-primary ml-1">Filial</label>
+              <select 
+                required 
+                className="w-full bg-white dark:bg-gray-900 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/50 transition-all shadow-sm"
+                value={formData.branchId} 
+                onChange={e => setFormData({...formData, branchId: e.target.value})}
+              >
+                <option value="">Filialni tanlang</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 mt-8">
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Bekor qilish</Button>
+            <Button type="submit">Saqlash</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

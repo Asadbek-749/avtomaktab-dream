@@ -14,7 +14,7 @@ export const TeacherDashboard = () => {
   }, [fetchGroups]);
 
   const myGroups = groups.filter(g => g.teacherId === user?.id);
-  const totalStudents = myGroups.reduce((acc, g) => acc + g.studentIds.length, 0);
+  const totalStudents = myGroups.reduce((acc, g) => acc + (g.studentIds || []).length, 0);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">

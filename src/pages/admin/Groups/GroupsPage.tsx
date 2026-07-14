@@ -95,7 +95,6 @@ export const GroupsPage = () => {
           name: data.name,
           teacherId: data.teacherId,
           branchId: data.branchId,
-          studentIds: [],
           status: 'active',
           schedule: data.days.map(day => ({
             day: day as any,

@@ -92,7 +92,7 @@ export const AdminDashboard = () => {
         <p className="text-text-muted">Maktabingizning umumiy holati va statistikasi</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <motion.div variants={itemVariants}>
           <StatCard
             title="Faol o'quvchilar"
@@ -116,14 +116,6 @@ export const AdminDashboard = () => {
             value={`${revenueThisMonth.toLocaleString()} so'm`}
             icon={IconCreditCard}
             trend={{ value: Number(revenueTrend.toFixed(1)), isPositive: revenueTrend >= 0 }}
-          />
-        </motion.div>
-        
-        <motion.div variants={itemVariants}>
-          <StatCard
-            title="O'zlashtirish"
-            value="89%"
-            icon={IconTrendingUp}
           />
         </motion.div>
       </div>

@@ -1,0 +1,16 @@
+{
+  "name": "Avto Maktab Dream Boshqaruv Tizimi",
+  "short_name": "Avto Maktab Dream",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/short-cart-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -76,7 +76,7 @@ export interface Group {
   teacherId: string;
   branchId: string;
   schedule: ScheduleSlot[];
-  studentIds: string[];
+  studentIds?: string[];
   status: 'active' | 'completed';
   createdAt: string;
   completedAt?: string;
