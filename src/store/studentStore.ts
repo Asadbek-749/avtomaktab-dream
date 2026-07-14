@@ -19,10 +19,19 @@ export const useStudentStore = create<StudentState>((set) => ({
   },
   addStudent: async (data) => {
     try {
-      await api.addStudent(data);
+      console.log('Adding student with data:', data);
+      const result = await api.addStudent(data);
+      console.log('Student added successfully:', result);
       const students = await api.getStudents();
       set({ students });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error('Error adding student:', e);
+      if ((e as any).response) {
+        console.error('Response error:', (e as any).response.data);
+        console.error('Response status:', (e as any).response.status);
+      }
+      throw e;
+    }
   },
   updateStudent: async (id, data) => {
     try {

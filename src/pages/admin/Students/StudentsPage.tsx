@@ -84,46 +84,53 @@ export const StudentsPage = () => {
     }).catch(console.error);
   }, [fetchStudents, fetchGroups, fetchBranches]);
 
-  const onSubmit = (data: StudentForm) => {
+  const onSubmit = async (data: StudentForm) => {
     if (user) {
       const selectedGroup = groups.find(g => g.id === data.groupId);
-      
-      if (editingStudent) {
-        updateStudent(editingStudent.id, {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          groupId: data.groupId,
-          instructorId: data.instructorId || undefined,
-          transmissionPreference: data.transmissionPreference || undefined,
-          branchId: selectedGroup?.branchId || user.branchId || '',
-          coursePrice: data.coursePrice,
-          providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
-        });
-      } else {
-        addStudent({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          groupId: data.groupId,
-          instructorId: data.instructorId || undefined,
-          transmissionPreference: data.transmissionPreference || undefined,
-          branchId: selectedGroup?.branchId || user.branchId || '',
-          coursePrice: data.coursePrice,
-          paidAmount: 0,
-          status: 'active',
-          drivingHoursRequired: 20,
-          drivingHoursDone: 0,
-          providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
-          documents: [],
-          examResults: [],
-          createdBy: user.id
-        });
+
+      try {
+        if (editingStudent) {
+          await updateStudent(editingStudent.id, {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            groupId: data.groupId,
+            instructorId: data.instructorId || undefined,
+            transmissionPreference: data.transmissionPreference || undefined,
+            branchId: selectedGroup?.branchId || user.branchId || '',
+            coursePrice: data.coursePrice,
+            providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
+          });
+          alert('O\'quvchi muvaffaqiyatli tahrirlandi!');
+        } else {
+          await addStudent({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            groupId: data.groupId,
+            instructorId: data.instructorId || undefined,
+            transmissionPreference: data.transmissionPreference || undefined,
+            branchId: selectedGroup?.branchId || user.branchId || '',
+            coursePrice: data.coursePrice,
+            paidAmount: 0,
+            status: 'active' as 'active',
+            drivingHoursRequired: 20,
+            drivingHoursDone: 0,
+            providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
+            documents: [],
+            examResults: [],
+            createdBy: user.id
+          });
+          alert('O\'quvchi muvaffaqiyatli qo\'shildi!');
+        }
+
+        setIsModalOpen(false);
+        setEditingStudent(null);
+        reset();
+      } catch (error) {
+        console.error('Submit error:', error);
+        alert('Xatolik yuz berdi! Iltimos, konsolni tekshiring.');
       }
-      
-      setIsModalOpen(false);
-      setEditingStudent(null);
-      reset();
     }
   };
 

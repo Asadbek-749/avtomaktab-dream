@@ -61,11 +61,19 @@ class ApiService {
     return res.data.map((s: any) => ({ ...s, id: s._id || s.id }));
   }
   async addStudent(data: Omit<Student, 'id' | 'createdAt'>): Promise<Student> {
-    const res = await apiInstance.post('/students', data);
+    // Filter out fields that don't exist in backend schema
+    const { documents, examResults, id, createdAt, ...cleanData } = data as any;
+
+    console.log('Sending student data to API:', cleanData);
+    const res = await apiInstance.post('/students', cleanData);
     return { ...res.data, id: res.data.id || res.data._id };
   }
   async updateStudent(id: string, data: Partial<Student>): Promise<Student> {
-    const res = await apiInstance.put(`/students/${id}`, data);
+    // Filter out fields that don't exist in backend schema
+    const { documents, examResults, id: _id, createdAt, createdBy, ...cleanData } = data as any;
+
+    console.log('Updating student with data:', cleanData);
+    const res = await apiInstance.put(`/students/${id}`, cleanData);
     return { ...res.data, id: res.data.id || res.data._id };
   }
 
