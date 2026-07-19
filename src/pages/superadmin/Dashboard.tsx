@@ -7,23 +7,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { api } from '../../services/api';
 import { useUserStore } from '../../store/userStore';
 import { useBranchStore } from '../../store/branchStore';
+import { useStudentStore } from '../../store/studentStore';
+import { useGroupStore } from '../../store/groupStore';
 
 const COLORS = ['var(--accent)', 'var(--success)', 'var(--warning)', 'var(--danger)'];
 
 export const SuperDashboard = () => {
   const { users, fetchUsers } = useUserStore();
   const { branches, fetchBranches } = useBranchStore();
-  const [logs, setLogs] = useState<any[]>([]);
+  const { students, fetchStudents } = useStudentStore();
+  const { groups, fetchGroups } = useGroupStore();
   const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
     fetchUsers();
     fetchBranches();
-    api.getLogs().then(setLogs).catch(console.error);
+    fetchStudents();
+    fetchGroups();
     api.getPayments().then(setPayments).catch(console.error);
-  }, [fetchUsers, fetchBranches]);
+  }, [fetchUsers, fetchBranches, fetchStudents, fetchGroups]);
   
-  const adminsCount = users.filter(u => u.role === 'admin').length;
   const teachersCount = users.filter(u => u.role === 'teacher').length;
   const currentMonthRevenue = payments.reduce((acc, p) => acc + p.amount, 0);
 
@@ -58,14 +61,19 @@ export const SuperDashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Jami Adminlar"
-          value={adminsCount}
-          icon={IconShield}
+          title="Jami O'quvchilar"
+          value={students.length}
+          icon={IconUsers}
+        />
+        <StatCard
+          title="Umumiy Guruhlar"
+          value={groups.length}
+          icon={IconUsers}
         />
         <StatCard
           title="Jami O'qituvchilar"
           value={teachersCount}
-          icon={IconUsers}
+          icon={IconShield}
         />
         <StatCard
           title="Umumiy Tushum"
@@ -73,15 +81,10 @@ export const SuperDashboard = () => {
           icon={IconWallet}
           trend={trend}
         />
-        <StatCard
-          title="Tizimdagi harakatlar"
-          value={logs.length}
-          icon={IconActivity}
-        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <Card className="lg:col-span-2">
+      <div className="mt-6">
+        <Card>
           <CardHeader>
             <CardTitle>Moliyaviy ko'rsatkichlar (Oxirgi 6 oy)</CardTitle>
           </CardHeader>
@@ -116,24 +119,6 @@ export const SuperDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Oxirgi faolliklar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {logs.slice(0, 5).map(log => (
-                <div key={log.id} className="flex flex-col gap-1 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <span className="text-sm font-medium text-text-primary">{log.userName}</span>
-                  <span className="text-sm text-text-secondary">{log.action}</span>
-                  <span className="text-xs text-text-muted">
-                    {new Date(log.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </motion.div>
   );
