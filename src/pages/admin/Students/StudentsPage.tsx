@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { exportToCSV } from '../../../utils/export';
 import { Modal } from '../../../components/ui/Modal';
-import { IconMessageCircle, IconCheck } from '@tabler/icons-react';
+import { IconMessageCircle, IconCheck, IconCar } from '@tabler/icons-react';
 import { useForm as useRHForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,8 +28,6 @@ const studentSchema = z.object({
   branchId: z.string().optional(),
   groupId: z.string().min(1, "Guruh tanlang"),
   coursePrice: z.number().min(100000, "Kurs narxi kiritilishi shart"),
-  instructorId: z.string().optional(),
-  transmissionPreference: z.string().optional(),
   providedDocuments: z.object({
     photo: z.boolean().default(false),
     form083: z.boolean().default(false),
@@ -55,6 +53,9 @@ export const StudentsPage = () => {
   const [simulatedSMS, setSimulatedSMS] = useState<Record<string, 'sending' | 'sent'>>({});
   const [isBulkSending, setIsBulkSending] = useState(false);
   const [instructors, setInstructors] = useState<User[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedStudentForAssign, setSelectedStudentForAssign] = useState<any>(null);
+  const [selectedInstructorId, setSelectedInstructorId] = useState('');
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useRHForm<StudentForm>({
     resolver: zodResolver(studentSchema),
@@ -95,8 +96,6 @@ export const StudentsPage = () => {
             lastName: data.lastName,
             phone: data.phone,
             groupId: data.groupId,
-            instructorId: data.instructorId || undefined,
-            transmissionPreference: data.transmissionPreference || undefined,
             branchId: selectedGroup?.branchId || user.branchId || '',
             coursePrice: data.coursePrice,
             providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
@@ -108,8 +107,6 @@ export const StudentsPage = () => {
             lastName: data.lastName,
             phone: data.phone,
             groupId: data.groupId,
-            instructorId: data.instructorId || undefined,
-            transmissionPreference: data.transmissionPreference || undefined,
             branchId: selectedGroup?.branchId || user.branchId || '',
             coursePrice: data.coursePrice,
             paidAmount: 0,
@@ -143,8 +140,6 @@ export const StudentsPage = () => {
       groupId: '',
       coursePrice: 1500000,
       branchId: user?.role === 'superadmin' ? '' : user?.branchId,
-      instructorId: '',
-      transmissionPreference: 'manual',
       providedDocuments: { photo: false, form083: false, passport: false }
     });
     setIsModalOpen(false);
@@ -160,8 +155,6 @@ export const StudentsPage = () => {
       groupId: student.groupId,
       coursePrice: student.coursePrice,
       branchId: student.branchId,
-      instructorId: student.instructorId || '',
-      transmissionPreference: student.transmissionPreference || 'manual',
       providedDocuments: student.providedDocuments || { photo: false, form083: false, passport: false }
     });
     setIsModalOpen(true);
@@ -193,6 +186,20 @@ export const StudentsPage = () => {
       setSelectedStudentForPayment(null);
     }
   };
+
+  const handleAssignInstructorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedStudentForAssign && selectedInstructorId) {
+      await updateStudent(selectedStudentForAssign.id, {
+        instructorId: selectedInstructorId,
+      });
+      alert("Instruktorga muvaffaqiyatli biriktirildi!");
+      setIsAssignModalOpen(false);
+      setSelectedStudentForAssign(null);
+      setSelectedInstructorId('');
+    }
+  };
+
   const displayBranchId = user?.role === 'superadmin' ? activeBranchId : user?.branchId;
 
   const filteredStudents = students.filter(student => {
@@ -381,6 +388,21 @@ export const StudentsPage = () => {
                         >
                           <IconEdit size={16} />
                         </Button>
+                        {!student.instructorId && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-8 h-8 p-0 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white"
+                            title="Instruktorga biriktirish"
+                            onClick={() => {
+                              setSelectedStudentForAssign(student);
+                              setSelectedInstructorId('');
+                              setIsAssignModalOpen(true);
+                            }}
+                          >
+                            <IconCar size={16} />
+                          </Button>
+                        )}
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -435,31 +457,6 @@ export const StudentsPage = () => {
               ))}
             </select>
             {errors.groupId && <span className="text-xs text-danger mt-1">{errors.groupId.message}</span>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-primary">Instruktor (Ixtiyoriy)</label>
-              <select 
-                className={`w-full bg-bg-base border ${errors.instructorId ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
-                {...register('instructorId')}
-              >
-                <option value="">Tanlanmagan</option>
-                {instructors.filter(i => user?.role === 'superadmin' ? (selectedFormBranch ? i.branchId === selectedFormBranch : true) : i.branchId === user?.branchId).map(i => (
-                  <option key={i.id} value={i.id}>{i.name} ({i.carModel} - {i.transmission === 'auto' ? 'Avtomat' : 'Mexanika'})</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-text-primary">Korobka (Xohish)</label>
-              <select 
-                className={`w-full bg-bg-base border ${errors.transmissionPreference ? 'border-danger' : 'border-border'} rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors`}
-                {...register('transmissionPreference')}
-              >
-                <option value="manual">Mexanika</option>
-                <option value="auto">Avtomat</option>
-              </select>
-            </div>
           </div>
 
           <Input 
@@ -546,6 +543,31 @@ export const StudentsPage = () => {
             >
               To'lovni tasdiqlash
             </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isAssignModalOpen} onClose={() => { setIsAssignModalOpen(false); setSelectedStudentForAssign(null); }} title="Amaliyotga biriktirish">
+        <form onSubmit={handleAssignInstructorSubmit} className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-primary">Instruktorni tanlang</label>
+            <select 
+              required
+              className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors"
+              value={selectedInstructorId}
+              onChange={(e) => setSelectedInstructorId(e.target.value)}
+            >
+              <option value="">Instruktorni tanlang</option>
+              {instructors
+                .filter(i => selectedStudentForAssign ? i.branchId === selectedStudentForAssign.branchId : true)
+                .map(i => (
+                <option key={i.id} value={i.id}>{i.name} ({i.carModel} - {i.transmission === 'auto' ? 'Avtomat' : 'Mexanika'})</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsAssignModalOpen(false)}>Bekor qilish</Button>
+            <Button type="submit" disabled={!selectedInstructorId}>Biriktirish</Button>
           </div>
         </form>
       </Modal>

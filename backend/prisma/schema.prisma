@@ -15,7 +15,7 @@ model User {
   phone        String
   role         String   // 'superadmin', 'admin', 'teacher', 'instructor'
   isActive     Boolean  @default(true)
-  
+
   // Fields for Instructor role
   carModel     String?
   carNumber    String?
@@ -27,14 +27,15 @@ model User {
   // Relations
   branchId     String?
   branch       Branch?  @relation(fields: [branchId], references: [id])
-  
+
   groupsAsTeacher Group[] @relation("TeacherGroups")
   studentsAdded   Student[] @relation("StudentCreator")
   paymentsAdded   Payment[] @relation("PaymentAdder")
   cashReports     CashReport[]
-  
+
   studentsAsInstructor Student[] @relation("StudentInstructor")
   drivingLessons       DrivingLesson[] @relation("InstructorLessons")
+  practiceAssignments  PracticeAssignment[] @relation("InstructorAssignments")
 }
 
 model Branch {
@@ -79,10 +80,19 @@ model Student {
   paidAmount        Float    @default(0)
   status            String   @default("active") // 'active', 'completed', 'stopped'
   providedDocuments Json?    // e.g. { photo: true, form083: true, passport: true }
-  
+
   drivingHoursRequired Float    @default(20)
   drivingHoursDone     Float    @default(0)
   transmissionPreference String? // 'manual', 'auto'
+
+  // Theory workflow
+  theoryCompletedAt   DateTime? // When admin marks theory complete
+  readyForPractice    Boolean   @default(false) // Manual flag by admin
+
+  // Practice workflow
+  practiceStatus      String?   @default("not_started") // 'not_started', 'waiting', 'in_progress', 'completed'
+  practiceStartedAt   DateTime? // When moved to waiting
+  practiceCompletedAt DateTime? // When admin approves completion
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -102,6 +112,7 @@ model Student {
 
   payments  Payment[]
   drivingLessons DrivingLesson[]
+  practiceAssignments PracticeAssignment[]
 }
 
 model Payment {
@@ -163,4 +174,40 @@ model DrivingLesson {
 
   instructorId String
   instructor   User     @relation("InstructorLessons", fields: [instructorId], references: [id])
+}
+
+model PracticeAssignment {
+  id            String   @id @default(uuid())
+
+  studentId     String
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  instructorId  String
+  instructor    User     @relation("InstructorAssignments", fields: [instructorId], references: [id])
+
+  vehicleId     String   // Car identifier (carModel + carNumber or separate Vehicle entity in future)
+
+  status        String   @default("active") // 'active', 'completed', 'cancelled'
+
+  assignedAt    DateTime @default(now())
+  startedAt     DateTime? // When first lesson logged
+  completedAt   DateTime?
+
+  hoursCompleted Float    @default(0)
+
+  // Completion workflow
+  markedReadyByInstructor Boolean  @default(false)
+  markedReadyAt           DateTime?
+  approvedByAdmin         Boolean  @default(false)
+  approvedByAdminId       String?
+  approvedAt              DateTime?
+
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([instructorId])
+  @@index([status])
 }
