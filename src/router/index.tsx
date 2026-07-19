@@ -10,7 +10,6 @@ import { PaymentsPage } from '../pages/admin/Payments/PaymentsPage';
 import { SchedulePage } from '../pages/admin/Schedule/SchedulePage';
 import { SuperDashboard } from '../pages/superadmin/Dashboard';
 import { AdminsPage } from '../pages/superadmin/AdminsPage';
-import { LogsPage } from '../pages/superadmin/LogsPage';
 import { BranchesPage } from '../pages/superadmin/BranchesPage';
 import { FinancePage } from '../pages/superadmin/FinancePage';
 import { AnalyticsPage } from '../pages/superadmin/AnalyticsPage';
@@ -70,7 +69,6 @@ export const AppRouter = () => {
           <Route path="branches" element={<RoleRoute allowedRoles={['superadmin']}><BranchesPage /></RoleRoute>} />
           <Route path="finance" element={<RoleRoute allowedRoles={['superadmin']}><FinancePage /></RoleRoute>} />
           <Route path="admins" element={<RoleRoute allowedRoles={['superadmin']}><AdminsPage /></RoleRoute>} />
-          <Route path="logs" element={<RoleRoute allowedRoles={['superadmin']}><LogsPage /></RoleRoute>} />
           <Route path="documents" element={<RoleRoute allowedRoles={['superadmin']}><DocumentsPage /></RoleRoute>} />
           <Route path="archive" element={<RoleRoute allowedRoles={['superadmin']}><ArchivePage /></RoleRoute>} />
           <Route path="analytics" element={<RoleRoute allowedRoles={['superadmin']}><AnalyticsPage /></RoleRoute>} />

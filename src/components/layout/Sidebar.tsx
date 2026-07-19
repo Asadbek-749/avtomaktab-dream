@@ -46,7 +46,6 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
       { name: 'Hujjatlar', path: '/superadmin/documents', icon: IconFileAlert },
       { name: 'Davomat', path: '/superadmin/reports', icon: IconBooks },
       { name: 'Adminlar', path: '/superadmin/admins', icon: IconUsers },
-      { name: 'Loglar', path: '/superadmin/logs', icon: IconSettings },
       { name: 'Arxiv', path: '/superadmin/archive', icon: IconArchive },
     ] : []),
     ...(user?.role === 'teacher' ? [

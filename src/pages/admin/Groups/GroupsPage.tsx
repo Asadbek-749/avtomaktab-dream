@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 const groupSchema = z.object({
   name: z.string().min(2, "Guruh nomi kiritilishi shart"),
   teacherId: z.string().min(1, "O'qituvchini tanlang"),
-  branchId: z.string().min(1, "Filialni tanlang"),
+  branchId: z.string().optional(),
   days: z.array(z.string()).min(1, "Kamida bitta kun tanlanishi kerak"),
   startTime: z.string().min(4, "Boshlanish vaqtini kiriting"),
   type: z.enum(['theory', 'practice'])
@@ -83,7 +83,7 @@ export const GroupsPage = () => {
         updateGroup(editingGroup.id, {
           name: data.name,
           teacherId: data.teacherId,
-          branchId: data.branchId,
+          branchId: data.branchId || user.branchId || '',
           schedule: data.days.map(day => ({
             day: day as any,
             startTime: data.startTime,
@@ -94,7 +94,7 @@ export const GroupsPage = () => {
         addGroup({
           name: data.name,
           teacherId: data.teacherId,
-          branchId: data.branchId,
+          branchId: data.branchId || user.branchId || '',
           status: 'active',
           schedule: data.days.map(day => ({
             day: day as any,
