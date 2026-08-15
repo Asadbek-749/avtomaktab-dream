@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { IconPlus, IconSearch, IconCheck, IconDownload, IconArrowBackUp, IconEdit } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
+import { IconPlus, IconSearch, IconCheck, IconDownload, IconArrowBackUp, IconEdit, IconUsers, IconCar, IconClock, IconCalendarEvent, IconChevronRight } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useGroupStore } from '../../../store/groupStore';
 import { useStudentStore } from '../../../store/studentStore';
@@ -13,8 +14,9 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuthStore } from '../../../store/authStore';
 import { useUserStore } from '../../../store/userStore';
-import { exportToExcel } from '../../../utils/export';
+import { exportToExcel } from '../../../utils/exportExcel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
+import { useConfirm } from '../../../hooks/useConfirm';
 
 const groupSchema = z.object({
   name: z.string().min(2, "Guruh nomi kiritilishi shart"),
@@ -44,9 +46,9 @@ export const GroupsPage = () => {
   const user = useAuthStore(state => state.user);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [studentsModalOpen, setStudentsModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [editingGroup, setEditingGroup] = useState<any>(null);
+  const [ConfirmDialog, confirm] = useConfirm();
 
   const { register, handleSubmit, reset, formState: { errors } } = useRHForm<GroupForm>({
     resolver: zodResolver(groupSchema),
@@ -59,6 +61,8 @@ export const GroupsPage = () => {
   });
 
   const teachers = users.filter(u => u.role === 'teacher');
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchGroups();
@@ -136,40 +140,42 @@ export const GroupsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleCompleteGroup = (groupId: string) => {
-    if (confirm("Haqiqatdan ham bu guruhni tugatmoqchimisiz?")) {
+  const handleCompleteGroup = async (groupId: string) => {
+    if (await confirm("Haqiqatdan ham bu guruhni tugatmoqchimisiz?")) {
       updateGroup(groupId, { status: 'completed', completedAt: new Date().toISOString() });
     }
   };
 
-  const handleReactivateGroup = (groupId: string) => {
-    if (confirm("Haqiqatdan ham bu guruhni qayta faollashtirmoqchimisiz?")) {
+  const handleReactivateGroup = async (groupId: string) => {
+    if (await confirm("Haqiqatdan ham bu guruhni qayta faollashtirmoqchimisiz?")) {
       updateGroup(groupId, { status: 'active', completedAt: undefined });
     }
   };
 
   const handleExportGroup = (group: any) => {
     const groupStudents = students.filter(s => s.groupId === group.id);
-    const exportData = groupStudents.map(s => ({
-      'Ism Familiya': `${s.firstName} ${s.lastName}`,
-      'Telefon': s.phone,
-      'Kurs Narxi': s.coursePrice,
-      'To\'langan': s.paidAmount,
-      'Qarzdorlik': s.coursePrice - s.paidAmount,
-      'Holati': s.status === 'active' ? 'O\'qimoqda' : 'Tugatgan'
-    }));
-    
-    if (exportData.length === 0) {
-      alert("Guruhda o'quvchilar yo'q!");
-      return;
-    }
-    
-    exportToExcel(exportData, `Guruh_${group.name}_Hisobot_${new Date().toISOString().split('T')[0]}`);
+    exportToExcel({
+      data: groupStudents.map(s => ({
+        ...s,
+        fullName: `${s.firstName} ${s.lastName}`,
+        debt: s.coursePrice - s.paidAmount,
+        statusFormatted: s.status === 'active' ? 'O\'qimoqda' : 'Tugatgan'
+      })),
+      columns: [
+        { header: 'Ism Familiya', key: 'fullName' },
+        { header: 'Telefon', key: 'phone' },
+        { header: 'Kurs Narxi', key: 'coursePrice' },
+        { header: 'To\'langan', key: 'paidAmount' },
+        { header: 'Qarzdorlik', key: 'debt' },
+        { header: 'Holati', key: 'statusFormatted' }
+      ],
+      fileName: `Guruh_${group.name}_Hisobot`,
+      sheetName: 'Oquvchilar'
+    });
   };
 
   const handleViewGroupStudents = (group: any) => {
-    setSelectedGroup(group);
-    setStudentsModalOpen(true);
+    navigate(`/admin/groups/${group.id}`);
   };
 
   return (
@@ -212,66 +218,119 @@ export const GroupsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className="hover:-translate-y-1 transition-transform duration-200">
-                <CardContent className="p-6 cursor-pointer" onClick={() => handleViewGroupStudents(group)}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-text-primary hover:text-accent transition-colors">{group.name}</h3>
-                      <p className="text-xs text-text-muted mt-1">Ochildi: {new Date(group.createdAt).toLocaleDateString('uz-UZ')}</p>
-                      {group.status === 'completed' && group.completedAt && (
-                        <p className="text-xs text-text-muted">Tugatildi: {new Date(group.completedAt).toLocaleDateString('uz-UZ')}</p>
-                      )}
-                    </div>
-                    <span className="bg-accent-bg text-accent px-3 py-1 rounded-full text-xs font-semibold">
-                      {students.filter(s => s.groupId === group.id).length} O'quvchi
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 mt-4 pt-4 border-t border-border text-sm">
-                    {group.schedule.map((slot, idx) => (
-                      <div key={idx} className="flex justify-between text-text-secondary">
-                        <span className="capitalize">{slot.day}</span>
-                        <span>{slot.startTime} ({slot.type === 'theory' ? 'Nazariya' : 'Amaliyot'})</span>
+              <Card className="hover:-translate-y-2 transition-all duration-500 shadow-xl hover:shadow-2xl border-0 overflow-hidden group/card relative rounded-[20px] bg-bg-base dark:bg-bg-card flex flex-col">
+                {/* Header (Dark Gradient) */}
+                <div 
+                  className="px-5 py-5 cursor-pointer relative bg-gradient-to-r from-slate-900 to-indigo-950 overflow-hidden"
+                  onClick={() => handleViewGroupStudents(group)}
+                >
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-[60px] group-hover/card:bg-indigo-400/30 transition-all duration-700 pointer-events-none"></div>
+
+                  <div className="flex justify-between items-start relative z-10">
+                    <div className="flex items-center gap-3">
+                      {/* Car Icon Box */}
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                        <IconCar size={26} stroke={1.5} />
                       </div>
-                    ))}
+                      <div>
+                        <h3 className="text-xl font-extrabold text-white tracking-tight">
+                          {group.name}
+                        </h3>
+                        <p className="text-xs text-slate-300 mt-0.5 flex items-center gap-1 font-medium">
+                          <IconCalendarEvent size={14} className="text-slate-400" />
+                          {new Date(group.createdAt).toLocaleDateString('uz-UZ')}
+                          {group.status === 'completed' && group.completedAt && (
+                             <span className="text-emerald-400 ml-1">
+                               (Tugatildi: {new Date(group.completedAt).toLocaleDateString('uz-UZ')})
+                             </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Floating Student Badge */}
+                    <div className="flex flex-col items-end">
+                      <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                        <IconUsers size={16} />
+                        {students.filter(s => s.groupId === group.id).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body (Schedule Rows) */}
+                <div className="p-4 pb-2 flex-1 bg-white dark:bg-[#0B0F19] relative z-20 -mt-3 rounded-t-[20px]">
+                  <div className="space-y-2">
+                    {group.schedule.map((slot, idx) => {
+                      const styles = [
+                        { leftBorder: 'border-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-500/20', iconText: 'text-indigo-600 dark:text-indigo-400', timeBg: 'bg-indigo-50 dark:bg-indigo-500/10', timeText: 'text-indigo-700 dark:text-indigo-300' },
+                        { leftBorder: 'border-sky-500', iconBg: 'bg-sky-100 dark:bg-sky-500/20', iconText: 'text-sky-600 dark:text-sky-400', timeBg: 'bg-sky-50 dark:bg-sky-500/10', timeText: 'text-sky-700 dark:text-sky-300' },
+                        { leftBorder: 'border-emerald-500', iconBg: 'bg-emerald-100 dark:bg-emerald-500/20', iconText: 'text-emerald-600 dark:text-emerald-400', timeBg: 'bg-emerald-50 dark:bg-emerald-500/10', timeText: 'text-emerald-700 dark:text-emerald-300' }
+                      ];
+                      const style = styles[idx % 3];
+                      
+                      const uzbekDays: Record<string, string> = {
+                        mon: 'Dush',
+                        tue: 'Sesh',
+                        wed: 'Chor',
+                        thu: 'Pay',
+                        fri: 'Juma',
+                        sat: 'Shan',
+                        sun: 'Yak'
+                      };
+                      const dayName = uzbekDays[slot.day.toLowerCase()] || slot.day.substring(0, 3);
+
+                      return (
+                        <div key={idx} className={`flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-white/5 border-l-[3px] border-y border-r border-border/40 hover:shadow-md transition-shadow ${style.leftBorder}`}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${style.iconBg} ${style.iconText}`}>
+                              <IconClock size={16} stroke={1.5} />
+                            </div>
+                            <span className="font-bold text-text-primary text-sm w-9">{dayName}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-1 justify-center">
+                            <span className={`px-2 py-0.5 rounded-md font-bold text-xs ${style.timeBg} ${style.timeText}`}>
+                              {slot.startTime}
+                            </span>
+                            <span className="text-xs font-medium text-text-muted">
+                              ({slot.type === 'theory' ? 'Nazariya' : 'Amaliyot'})
+                            </span>
+                          </div>
+                          <IconChevronRight size={16} className="text-text-muted/50" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Footer (Action Buttons) */}
+                <div className="p-4 pt-3 bg-white dark:bg-[#0B0F19] grid grid-cols-2 gap-3" onClick={(e) => e.stopPropagation()}>
+                  <div 
+                    className="flex flex-row items-center justify-center gap-2 py-2.5 rounded-xl border border-border/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-500/30 transition-all cursor-pointer text-center group/btn"
+                    onClick={(e) => handleEditGroup(group, e)}
+                  >
+                    <IconEdit size={18} stroke={2} className="text-indigo-500 group-hover/btn:scale-110 transition-transform" />
+                    <span className="font-bold text-text-primary text-sm">Tahrir</span>
                   </div>
 
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 gap-2 text-xs h-8"
-                      onClick={(e) => handleEditGroup(group, e)}
+                  {group.status === 'active' ? (
+                    <div 
+                      className="flex flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white shadow-md shadow-emerald-500/20 transition-all cursor-pointer text-center group/btn"
+                      onClick={() => handleCompleteGroup(group.id)}
                     >
-                      <IconEdit size={14} />
-                      Tahrir
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 gap-2 text-xs h-8"
-                      onClick={() => handleExportGroup(group)}
+                      <IconCheck size={18} stroke={2.5} className="group-hover/btn:scale-110 transition-transform" />
+                      <span className="font-bold text-sm">Tugatish</span>
+                    </div>
+                  ) : (
+                    <div 
+                      className="flex flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-md shadow-orange-500/20 transition-all cursor-pointer text-center group/btn"
+                      onClick={() => handleReactivateGroup(group.id)}
                     >
-                      <IconDownload size={14} />
-                      Excel
-                    </Button>
-                    {group.status === 'active' ? (
-                      <Button 
-                        className="flex-1 gap-2 text-xs h-8 bg-success/10 text-success hover:bg-success hover:text-white border-none"
-                        onClick={() => handleCompleteGroup(group.id)}
-                      >
-                        <IconCheck size={14} />
-                        Tugatish
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="flex-1 gap-2 text-xs h-8 bg-warning/10 text-warning hover:bg-warning hover:text-white border-none"
-                        onClick={() => handleReactivateGroup(group.id)}
-                      >
-                        <IconArrowBackUp size={14} />
-                        Qayta tiklash
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
+                      <IconArrowBackUp size={18} stroke={2.5} className="group-hover/btn:scale-110 transition-transform" />
+                      <span className="font-bold text-sm">Tiklash</span>
+                    </div>
+                  )}
+                </div>
               </Card>
             </motion.div>
           ))
@@ -363,44 +422,7 @@ export const GroupsPage = () => {
         </form>
       </Modal>
 
-      {/* O'quvchilar ro'yxati modali */}
-      <Modal isOpen={studentsModalOpen} onClose={() => setStudentsModalOpen(false)} title={`${selectedGroup?.name || ''} o'quvchilari`}>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          {selectedGroup && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ism Familiya</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead className="text-right">Qarzi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.filter(s => s.groupId === selectedGroup.id).length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4 text-text-muted">
-                      Bu guruhda o'quvchilar yo'q
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  students.filter(s => s.groupId === selectedGroup.id).map(student => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
-                      <TableCell>{student.phone}</TableCell>
-                      <TableCell className="text-right text-danger font-medium">
-                        {(student.coursePrice - student.paidAmount).toLocaleString()} so'm
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-          <div className="flex justify-end mt-4">
-            <Button variant="outline" onClick={() => setStudentsModalOpen(false)}>Yopish</Button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog />
     </motion.div>
   );
 };

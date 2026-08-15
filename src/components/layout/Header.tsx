@@ -29,8 +29,8 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
             <IconMenu2 size={24} />
           </button>
           
-          <h1 className="text-xl md:text-2xl font-bold text-gradient hidden sm:block tracking-tight">
-            Avtomaktab
+          <h1 className="text-xl md:text-2xl font-bold hidden sm:block tracking-tight">
+            <span className="text-blue-500">Avtomaktab</span> <span className="text-amber-500">Dream</span>
           </h1>
         </div>
 

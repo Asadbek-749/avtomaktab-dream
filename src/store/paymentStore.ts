@@ -7,6 +7,7 @@ interface PaymentState {
   payments: Payment[];
   fetchPayments: () => Promise<void>;
   addPayment: (data: Omit<Payment, 'id'>, userName: string) => Promise<void>;
+  deletePayment: (id: string) => Promise<void>;
 }
 
 export const usePaymentStore = create<PaymentState>((set) => ({
@@ -24,5 +25,12 @@ export const usePaymentStore = create<PaymentState>((set) => ({
       set({ payments });
       await useStudentStore.getState().fetchStudents();
     } catch (e) { console.error(e); }
+  },
+  deletePayment: async (id) => {
+    try {
+      await api.deletePayment(id);
+      set(state => ({ payments: state.payments.filter(p => p.id !== id) }));
+      await useStudentStore.getState().fetchStudents();
+    } catch (e) { console.error(e); throw e; }
   }
 }));

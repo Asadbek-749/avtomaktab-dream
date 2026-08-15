@@ -1,128 +1,126 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStudentStore } from '../../../store/studentStore';
 import { useGroupStore } from '../../../store/groupStore';
+import { usePaymentStore } from '../../../store/paymentStore';
+import { useExpenseStore } from '../../../store/expenseStore';
+import { useUserStore } from '../../../store/userStore';
 import { useBranchStore } from '../../../store/branchStore';
 import { useAuthStore } from '../../../store/authStore';
 import { Card, CardContent } from '../../../components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/Table';
-import { Modal } from '../../../components/ui/Modal';
-import { Button } from '../../../components/ui/Button';
-import { IconArchive } from '@tabler/icons-react';
+import { IconArchive, IconChevronRight } from '@tabler/icons-react';
 
 export const ArchivePage = () => {
-
+  const navigate = useNavigate();
   const { students, fetchStudents } = useStudentStore();
   const { groups, fetchGroups } = useGroupStore();
+  const { payments, fetchPayments } = usePaymentStore();
+  const { expenses, fetchExpenses } = useExpenseStore();
+  const { users, fetchUsers } = useUserStore();
   const { activeBranchId } = useBranchStore();
   const user = useAuthStore(state => state.user);
-  
-  const [selectedGroup, setSelectedGroup] = useState<any>(null);
-  const [studentsModalOpen, setStudentsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchStudents();
     fetchGroups();
-  }, [fetchStudents, fetchGroups]);
+    fetchPayments();
+    fetchExpenses();
+    fetchUsers();
+  }, [fetchStudents, fetchGroups, fetchPayments, fetchExpenses, fetchUsers]);
 
   const displayBranchId = user?.role === 'superadmin' ? activeBranchId : user?.branchId;
 
-  const archivedGroups = groups.filter(g => 
-    g.status === 'completed' && (!displayBranchId || g.branchId === displayBranchId)
-  );
+  // Guruhlash mantiqi: Yil-Oy bo'yicha
+  const monthlyData = useMemo(() => {
+    const dataMap = new Map<string, {
+      id: string,
+      title: string,
+      totalIncome: number,
+      totalExpense: number
+    }>();
 
-  const handleViewGroupStudents = (group: any) => {
-    setSelectedGroup(group);
-    setStudentsModalOpen(true);
-  };
+    // Generate months from COMPLETED groups, payments, expenses
+    const dates = [
+      ...groups.filter(g => g.status === 'completed' && g.completedAt).map(g => g.completedAt),
+      ...payments.map(p => p.date),
+      ...expenses.map(e => e.date)
+    ];
+
+    dates.forEach(d => {
+      if (!d) return;
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return;
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      
+      const uzbekMonths = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+      const title = `${uzbekMonths[dt.getMonth()]} ${dt.getFullYear()}`;
+      
+      if (!dataMap.has(key)) {
+        dataMap.set(key, { id: key, title, totalIncome: 0, totalExpense: 0 });
+      }
+    });
+
+    const months = Array.from(dataMap.values()).sort((a, b) => b.id.localeCompare(a.id));
+
+    months.forEach(month => {
+      const [yearStr, monthStr] = month.id.split('-');
+      const y = parseInt(yearStr);
+      const m = parseInt(monthStr) - 1;
+
+      month.totalIncome = payments.filter(p => {
+        if (displayBranchId && p.branchId !== displayBranchId) return false;
+        const d = new Date(p.date);
+        return d.getFullYear() === y && d.getMonth() === m;
+      }).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+      month.totalExpense = expenses.filter(e => {
+        if (displayBranchId && e.branchId !== displayBranchId) return false;
+        const d = new Date(e.date);
+        return d.getFullYear() === y && d.getMonth() === m;
+      }).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    });
+
+    return months;
+  }, [groups, payments, expenses, users, students, displayBranchId]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">Arxiv</h2>
-          <p className="text-text-muted">Tugatilgan guruhlar tarixi</p>
+          <h2 className="text-2xl font-bold text-text-primary">Oylik Arxiv</h2>
+          <p className="text-text-muted">Oyma-oy moliya va boshqaruv tarixi</p>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Guruh Nomi</TableHead>
-                <TableHead>Ochilgan sana</TableHead>
-                <TableHead>Tugagan sana</TableHead>
-                <TableHead>O'quvchilar soni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {archivedGroups.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-text-muted">
-                    <div className="flex flex-col items-center">
-                      <IconArchive size={48} className="opacity-20 mb-2" />
-                      Arxivlangan guruhlar yo'q
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                archivedGroups.map(group => (
-                  <TableRow 
-                    key={group.id} 
-                    className="cursor-pointer hover:bg-bg-hover transition-colors"
-                    onClick={() => handleViewGroupStudents(group)}
-                  >
-                    <TableCell className="font-medium">{group.name}</TableCell>
-                    <TableCell>{new Date(group.createdAt).toLocaleDateString('uz-UZ')}</TableCell>
-                    <TableCell>{group.completedAt ? new Date(group.completedAt).toLocaleDateString('uz-UZ') : '-'}</TableCell>
-                    <TableCell>{students.filter(s => s.groupId === group.id).length}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* O'quvchilar ro'yxati modali */}
-      <Modal isOpen={studentsModalOpen} onClose={() => setStudentsModalOpen(false)} title={`${selectedGroup?.name || ''} o'quvchilari (Arxiv)`}>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          {selectedGroup && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ism Familiya</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead className="text-right">To'langan summa</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.filter(s => s.groupId === selectedGroup.id).length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4 text-text-muted">
-                      Bu guruhda o'quvchilar yo'q
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  students.filter(s => s.groupId === selectedGroup.id).map(student => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
-                      <TableCell>{student.phone}</TableCell>
-                      <TableCell className="text-right text-success font-medium">
-                        {student.paidAmount.toLocaleString()} so'm
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-          <div className="flex justify-end mt-4">
-            <Button variant="outline" onClick={() => setStudentsModalOpen(false)}>Yopish</Button>
-          </div>
-        </div>
-      </Modal>
+      <div className="space-y-4">
+        {monthlyData.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12 text-text-muted">
+              <IconArchive size={48} className="opacity-20 mb-2" />
+              <p>Arxiv ma'lumotlari topilmadi</p>
+            </CardContent>
+          </Card>
+        ) : (
+          monthlyData.map(month => (
+            <Card key={month.id} className="overflow-hidden border-border bg-bg-card hover:border-accent/50 transition-colors">
+              <div 
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-bg-hover/50 transition-colors group"
+                onClick={() => navigate(`/${user?.role}/archive/${month.id}`)}
+              >
+                <div className="flex items-center gap-3">
+                  <IconChevronRight size={20} className="text-text-muted group-hover:text-accent transition-colors" />
+                  <h3 className="text-lg font-semibold text-text-primary capitalize">{month.title}</h3>
+                </div>
+                <div className="flex gap-6 text-sm font-medium">
+                  <span className="text-emerald-600">Tushum: {month.totalIncome.toLocaleString()} UZS</span>
+                  <span className="text-rose-600">Xarajat: {month.totalExpense.toLocaleString()} UZS</span>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </motion.div>
   );
 };

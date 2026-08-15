@@ -63,7 +63,7 @@ export const DocumentsPage = () => {
           <CardHeader>
             <CardTitle>Ro'yxat</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
             <Table>
               <TableHeader>
                 <TableRow>

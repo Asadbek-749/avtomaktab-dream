@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconX } from '@tabler/icons-react';
 
@@ -11,7 +12,7 @@ interface ModalProps {
 }
 
 export const Modal = ({ isOpen, onClose, title, children, size = 'lg' }: ModalProps) => {
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -43,6 +44,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'lg' }: ModalPr
             </motion.div>
           </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

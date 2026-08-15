@@ -13,6 +13,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '../../../components/ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
+import { exportToExcel } from '../../../utils/exportExcel';
+import { IconDownload } from '@tabler/icons-react';
 
 export const PaymentsPage = () => {
   const { payments, fetchPayments } = usePaymentStore();
@@ -49,15 +51,13 @@ export const PaymentsPage = () => {
     });
   };
 
-  // Calculate today's total payments added by this admin
+  // Calculate today's total payments added by this admin that are not yet reported
   const today = new Date().toISOString().split('T')[0];
-  const todayPayments = payments.filter(p => {
-    return p.date.startsWith(today) && p.addedBy === user?.id;
-  });
-  const todayTotal = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+  const pendingPayments = payments.filter(p => p.addedBy === user?.id && !p.cashReportId);
+  const todayTotal = pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
   // Check if already closed today
-  const hasClosedToday = reports.some(r => r.date.startsWith(today) && r.addedBy === user?.id);
+  const hasClosedToday = reports.some(r => r.date.startsWith(today) && r.addedBy === user?.id) && pendingPayments.length === 0;
 
   const handleCloseCash = () => {
     if (user) {
@@ -101,6 +101,24 @@ export const PaymentsPage = () => {
   const branchGroups = groups.filter(g => g.branchId === user?.branchId && g.status === 'active');
   const filteredStudents = selectedGroupId ? branchStudents.filter(s => s.groupId === selectedGroupId && (s.coursePrice - s.paidAmount) > 0) : [];
 
+  const handleExport = () => {
+    exportToExcel({
+      data: payments.map(p => ({
+        ...p,
+        studentName: getStudentName(p.studentId),
+        dateFormatted: formatDate(p.date)
+      })),
+      columns: [
+        { header: "O'quvchi", key: 'studentName' },
+        { header: 'Summa', key: 'amount' },
+        { header: 'Sana', key: 'dateFormatted' },
+        { header: 'Izoh', key: 'note' }
+      ],
+      fileName: 'moliya_hisoboti',
+      sheetName: 'To\'lovlar'
+    });
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -108,7 +126,10 @@ export const PaymentsPage = () => {
           <h2 className="text-2xl font-bold text-text-primary">To'lovlar</h2>
           <p className="text-text-muted">Kiritilgan barcha to'lovlar tarixi</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <IconDownload size={18} /> Excel
+          </Button>
           {hasClosedToday ? (
             <Button variant="outline" className="gap-2 bg-success/10 text-success border-success" disabled>
               <IconCheck size={18} />
@@ -137,15 +158,15 @@ export const PaymentsPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.length === 0 ? (
+              {pendingPayments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-text-muted">
-                    To'lovlar topilmadi
+                  <TableCell colSpan={6} className="text-center py-8 text-text-muted">
+                    Hozircha yangi to'lovlar yo'q
                   </TableCell>
                 </TableRow>
               ) : (
-                payments.map((payment, i) => (
-                  <TableRow key={payment.id} transition={{ delay: i * 0.05 }}>
+                pendingPayments.slice().reverse().map(payment => (
+                  <TableRow key={payment.id} className="group">
                     <TableCell className="font-medium">{getStudentName(payment.studentId)}</TableCell>
                     <TableCell className="font-bold text-success">
                       + {payment.amount.toLocaleString()} so'm
@@ -162,12 +183,12 @@ export const PaymentsPage = () => {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Kassani yopish">
         <div className="space-y-4">
-          <p className="text-text-secondary">Siz bugun quyidagi miqdorda to'lov qabul qildingiz:</p>
-          <div className="text-3xl font-bold text-success text-center py-4 bg-success/10 rounded-xl">
-            {todayTotal.toLocaleString()} so'm
+          <p className="text-text-secondary">Siz tasdiqlanmagan quyidagi miqdorda to'lov qabul qildingiz:</p>
+          <div className="text-center py-4">
+            <span className="text-3xl font-bold text-success">{todayTotal.toLocaleString()} so'm</span>
           </div>
-          <p className="text-sm text-danger/80 bg-danger/10 p-3 rounded-lg">
-            Diqqat! "Hisobotni yuborish" tugmasini bosgach, kunlik tushum Superadminga tasdiqlash uchun yuboriladi va bugungi kassangiz yopiladi. Ushbu amalni bekor qilib bo'lmaydi.
+          <p className="text-sm text-text-muted bg-bg-hover p-4 rounded-lg">
+            Diqqat! "Hisobotni yuborish" tugmasini bosgach, ushbu tushum Superadminga tasdiqlash uchun yuboriladi va bu to'lovlar ro'yxatdan o'chadi. Ushbu amalni bekor qilib bo'lmaydi.
           </p>
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Bekor qilish</Button>

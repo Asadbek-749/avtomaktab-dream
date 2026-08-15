@@ -20,6 +20,7 @@ model User {
   carModel     String?
   carNumber    String?
   transmission String?  // 'manual', 'auto'
+  studentPrice Decimal?  @default(200000) // Instructor's fee per student, 'auto'
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -32,10 +33,15 @@ model User {
   studentsAdded   Student[] @relation("StudentCreator")
   paymentsAdded   Payment[] @relation("PaymentAdder")
   cashReports     CashReport[]
+  expensesAdded   Expense[] @relation("ExpenseAdder")
 
   studentsAsInstructor Student[] @relation("StudentInstructor")
   drivingLessons       DrivingLesson[] @relation("InstructorLessons")
   practiceAssignments  PracticeAssignment[] @relation("InstructorAssignments")
+  practiceGroups       PracticeGroup[] @relation("InstructorPracticeGroups")
+  
+  instructorPaymentsReceived InstructorPayment[] @relation("InstructorPayments")
+  instructorPaymentsAdded    InstructorPayment[] @relation("InstructorPaymentAdder")
 }
 
 model Branch {
@@ -51,6 +57,9 @@ model Branch {
   students  Student[]
   payments  Payment[]
   cashReports CashReport[]
+  expenses  Expense[]
+  instructorPayments InstructorPayment[]
+  practiceGroups PracticeGroup[]
 }
 
 model Group {
@@ -60,10 +69,28 @@ model Group {
   schedule  Json     // e.g. [{ day: 'mon', startTime: '09:00', type: 'theory' }]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  completedAt DateTime?
 
   // Relations
   teacherId String
   teacher   User     @relation("TeacherGroups", fields: [teacherId], references: [id])
+  
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+
+  students  Student[]
+}
+
+model PracticeGroup {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("active") // 'active', 'completed'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+
+  instructorId String
+  instructor   User     @relation("InstructorPracticeGroups", fields: [instructorId], references: [id])
   
   branchId  String
   branch    Branch   @relation(fields: [branchId], references: [id])
@@ -76,14 +103,18 @@ model Student {
   firstName         String
   lastName          String
   phone             String
-  coursePrice       Float
-  paidAmount        Float    @default(0)
+  coursePrice       Decimal
+  paidAmount        Decimal    @default(0)
   status            String   @default("active") // 'active', 'completed', 'stopped'
   providedDocuments Json?    // e.g. { photo: true, form083: true, passport: true }
 
   drivingHoursRequired Float    @default(20)
   drivingHoursDone     Float    @default(0)
   transmissionPreference String? // 'manual', 'auto'
+
+  pinfl             String?
+  passport          String?
+  additionalPhone   String?
 
   // Theory workflow
   theoryCompletedAt   DateTime? // When admin marks theory complete
@@ -93,6 +124,8 @@ model Student {
   practiceStatus      String?   @default("not_started") // 'not_started', 'waiting', 'in_progress', 'completed'
   practiceStartedAt   DateTime? // When moved to waiting
   practiceCompletedAt DateTime? // When admin approves completion
+  practiceGroupId     String?   
+  practiceGroup       PracticeGroup? @relation(fields: [practiceGroupId], references: [id])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -117,28 +150,37 @@ model Student {
 
 model Payment {
   id        String   @id @default(uuid())
-  amount    Float
+  amount    Decimal
+  method    String   @default("naqd") // "naqd", "karta", "hisob"
   date      DateTime
   note      String?
   createdAt DateTime @default(now())
 
   // Relations
-  studentId String
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    String
+  branchId     String
+  addedBy      String
+  cashReportId String?
 
-  branchId  String
-  branch    Branch   @relation(fields: [branchId], references: [id])
+  student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  adder      User        @relation("PaymentAdder", fields: [addedBy], references: [id])
+  cashReport CashReport? @relation(fields: [cashReportId], references: [id])
 
-  addedBy   String
-  adder     User     @relation("PaymentAdder", fields: [addedBy], references: [id])
+  @@index([date])
+  @@index([branchId, date])
 }
 
 model CashReport {
   id          String   @id @default(uuid())
   date        DateTime
-  totalAmount Float
+  totalAmount Decimal
+  cashAmount  Decimal  @default(0)
+  cardAmount  Decimal  @default(0)
+  bankAmount  Decimal  @default(0)
   status      String   @default("pending") // 'pending', 'approved', 'rejected'
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   // Relations
   addedBy     String
@@ -146,6 +188,8 @@ model CashReport {
 
   branchId    String
   branch      Branch   @relation(fields: [branchId], references: [id])
+  
+  payments    Payment[]
 }
 
 model ActivityLog {
@@ -156,6 +200,25 @@ model ActivityLog {
   userName  String
   branchId  String?
   createdAt DateTime @default(now())
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  amount    Decimal
+  category  String   // 'salary', 'fuel', 'rent', 'tax', 'other'
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+  
+  // Relations
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  
+  addedBy   String
+  adder     User     @relation("ExpenseAdder", fields: [addedBy], references: [id])
+
+  @@index([date])
+  @@index([branchId, date])
 }
 
 model DrivingLesson {
@@ -211,3 +274,26 @@ model PracticeAssignment {
   @@index([instructorId])
   @@index([status])
 }
+
+model InstructorPayment {
+  id           String   @id @default(uuid())
+  amount       Decimal
+  type         String   // 'avans' | 'salary'
+  date         DateTime
+  note         String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  instructorId String
+  instructor   User     @relation("InstructorPayments", fields: [instructorId], references: [id], onDelete: Cascade)
+  
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  
+  addedBy      String
+  adder        User     @relation("InstructorPaymentAdder", fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([instructorId, date])
+}
+

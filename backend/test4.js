@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const group = await prisma.group.findFirst({ select: { id: true, name: true } }); console.log(group); } main().finally(() => prisma.$disconnect());

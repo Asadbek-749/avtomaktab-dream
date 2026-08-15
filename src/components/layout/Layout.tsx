@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, useLocation, useOutlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
 import { Sidebar } from './Sidebar';
@@ -10,6 +10,7 @@ export const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const location = useLocation();
+  const element = useOutlet();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -39,7 +40,7 @@ export const Layout = () => {
         <Header onMenuClick={handleMenuClick} />
         <main className="flex-1 overflow-y-auto p-6 pt-8 md:p-8 md:pt-10 w-full">
           <div className="max-w-7xl mx-auto w-full h-full">
-            <AnimatePresence mode="wait">
+              <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={location.pathname}
                 initial={{ opacity: 0, y: 15, filter: 'blur(4px)' }}
@@ -48,7 +49,7 @@ export const Layout = () => {
                 transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="h-full"
               >
-                <Outlet />
+                {element}
               </motion.div>
             </AnimatePresence>
           </div>

@@ -1,9 +1,7 @@
 import axios from 'axios';
-import { Student, Group, Payment, User, ActivityLog, CashReport, Branch, Attendance } from '../types';
+import { Student, Group, Payment, User, ActivityLog, CashReport, Branch, Attendance, InstructorPayment } from '../types';
 
-// const API_URL = 'http://localhost:5000/api';
-// const API_URL = 'http://194.99.22.218:5000/api';
-const API_URL = 'https://api.avtodream.uz/api';
+const API_URL = import.meta.env.PROD ? 'https://api.avtodream.uz/api' : 'http://localhost:5000/api';
 
 const apiInstance = axios.create({
   baseURL: API_URL
@@ -31,6 +29,10 @@ class ApiService {
   }
   async addBranch(data: Omit<Branch, 'id' | 'createdAt'>): Promise<Branch> {
     const res = await apiInstance.post('/branches', data);
+    return res.data;
+  }
+  async updateBranch(id: string, data: Partial<Branch>): Promise<Branch> {
+    const res = await apiInstance.put(`/branches/${id}`, data);
     return res.data;
   }
   async deleteBranch(id: string): Promise<void> {
@@ -76,6 +78,9 @@ class ApiService {
     const res = await apiInstance.put(`/students/${id}`, cleanData);
     return { ...res.data, id: res.data.id || res.data._id };
   }
+  async deleteStudent(id: string): Promise<void> {
+    await apiInstance.delete(`/students/${id}`);
+  }
 
   // --- Groups ---
   async getGroups(): Promise<Group[]> {
@@ -117,9 +122,18 @@ class ApiService {
     return res.data;
   }
   
-  // --- Cash Reports (mocking to prevent errors if called) ---
+  // --- Cash Reports ---
   async getCashReports(): Promise<CashReport[]> {
-    return [];
+    const res = await apiInstance.get('/cash-reports');
+    return res.data;
+  }
+  async addCashReport(totalAmount: number, addedBy: string, branchId: string): Promise<CashReport> {
+    const res = await apiInstance.post('/cash-reports', { totalAmount, branchId });
+    return res.data;
+  }
+  async updateCashReport(id: string, status: string, superadminId: string): Promise<CashReport> {
+    const res = await apiInstance.put(`/cash-reports/${id}`, { status });
+    return res.data;
   }
   
   // --- Attendance (mocking) ---
@@ -142,6 +156,63 @@ class ApiService {
   }
   async deleteDrivingLesson(id: string): Promise<void> {
     await apiInstance.delete(`/driving-lessons/${id}`);
+  }
+
+  // --- Expenses ---
+  async getExpenses(): Promise<any[]> {
+    const res = await apiInstance.get('/expenses');
+    return res.data;
+  }
+  async addExpense(data: any): Promise<any> {
+    const res = await apiInstance.post('/expenses', data);
+    return res.data;
+  }
+  async deleteExpense(id: string): Promise<void> {
+    await apiInstance.delete(`/expenses/${id}`);
+  }
+
+  // --- Payments (Extended) ---
+  async deletePayment(id: string): Promise<void> {
+    await apiInstance.delete(`/payments/${id}`);
+  }
+
+  // --- Instructor Payments ---
+  async getInstructorPayments(instructorId: string): Promise<InstructorPayment[]> {
+    const res = await apiInstance.get(`/instructor-payments/instructor/${instructorId}`);
+    return res.data;
+  }
+  async addInstructorPayment(data: Omit<InstructorPayment, 'id' | 'createdAt'>): Promise<InstructorPayment> {
+    const res = await apiInstance.post('/instructor-payments', data);
+    return res.data;
+  }
+  async deleteInstructorPayment(id: string): Promise<void> {
+    await apiInstance.delete(`/instructor-payments/${id}`);
+  }
+
+  // --- Practice Groups ---
+  async getPracticeGroups(instructorId?: string, branchId?: string): Promise<any[]> {
+    const params: any = {};
+    if (instructorId) params.instructorId = instructorId;
+    if (branchId) params.branchId = branchId;
+    const res = await apiInstance.get('/practice-groups', { params });
+    return res.data;
+  }
+  async createPracticeGroup(data: { name: string, instructorId: string, branchId: string }): Promise<any> {
+    const res = await apiInstance.post('/practice-groups', data);
+    return res.data;
+  }
+  async updatePracticeGroup(id: string, data: { name?: string, status?: 'active' | 'completed' }): Promise<any> {
+    const res = await apiInstance.put(`/practice-groups/${id}`, data);
+    return res.data;
+  }
+  async deletePracticeGroup(id: string): Promise<void> {
+    await apiInstance.delete(`/practice-groups/${id}`);
+  }
+
+  // --- Instructor Finance Summary ---
+  async getInstructorFinanceSummary(): Promise<any[]> {
+    const res = await apiInstance.get('/instructor-payments/summary');
+    return res.data;
   }
 }
 

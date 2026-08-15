@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { IconPlus, IconSearch, IconEdit, IconTrash, IconDownload, IconCash, IconFileCheck } from '@tabler/icons-react';
+import { IconPlus, IconSearch, IconEdit, IconTrash, IconDownload, IconCash, IconFileCheck, IconUser } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useStudentStore } from '../../../store/studentStore';
 import { useGroupStore } from '../../../store/groupStore';
 import { useBranchStore } from '../../../store/branchStore';
@@ -13,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '../../../components/ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
-import { exportToCSV } from '../../../utils/export';
+import { exportToExcel } from '../../../utils/exportExcel';
 import { Modal } from '../../../components/ui/Modal';
 import { IconMessageCircle, IconCheck, IconCar } from '@tabler/icons-react';
 import { useForm as useRHForm, useWatch } from 'react-hook-form';
@@ -28,6 +29,9 @@ const studentSchema = z.object({
   branchId: z.string().optional(),
   groupId: z.string().min(1, "Guruh tanlang"),
   coursePrice: z.number().min(100000, "Kurs narxi kiritilishi shart"),
+  pinfl: z.string().optional(),
+  passport: z.string().optional(),
+  additionalPhone: z.string().optional(),
   providedDocuments: z.object({
     photo: z.boolean().default(false),
     form083: z.boolean().default(false),
@@ -50,12 +54,15 @@ export const StudentsPage = () => {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
-  const [simulatedSMS, setSimulatedSMS] = useState<Record<string, 'sending' | 'sent'>>({});
-  const [isBulkSending, setIsBulkSending] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'naqd' | 'karta' | 'hisob'>('naqd');
   const [instructors, setInstructors] = useState<User[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedStudentForAssign, setSelectedStudentForAssign] = useState<any>(null);
   const [selectedInstructorId, setSelectedInstructorId] = useState('');
+  const [practiceGroupId, setPracticeGroupId] = useState('');
+  const [instructorGroups, setInstructorGroups] = useState<any[]>([]);
+  
+  const navigate = useNavigate();
 
   const { register, handleSubmit, reset, control, formState: { errors } } = useRHForm<StudentForm>({
     resolver: zodResolver(studentSchema),
@@ -98,6 +105,9 @@ export const StudentsPage = () => {
             groupId: data.groupId,
             branchId: selectedGroup?.branchId || user.branchId || '',
             coursePrice: data.coursePrice,
+            pinfl: data.pinfl,
+            passport: data.passport,
+            additionalPhone: data.additionalPhone,
             providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
           });
           alert('O\'quvchi muvaffaqiyatli tahrirlandi!');
@@ -113,6 +123,9 @@ export const StudentsPage = () => {
             status: 'active' as 'active',
             drivingHoursRequired: 20,
             drivingHoursDone: 0,
+            pinfl: data.pinfl,
+            passport: data.passport,
+            additionalPhone: data.additionalPhone,
             providedDocuments: data.providedDocuments || { photo: false, form083: false, passport: false },
             documents: [],
             examResults: [],
@@ -155,12 +168,15 @@ export const StudentsPage = () => {
       groupId: student.groupId,
       coursePrice: student.coursePrice,
       branchId: student.branchId,
+      pinfl: student.pinfl || '',
+      passport: student.passport || '',
+      additionalPhone: student.additionalPhone || '',
       providedDocuments: student.providedDocuments || { photo: false, form083: false, passport: false }
     });
     setIsModalOpen(true);
   };
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = Number(paymentAmount);
     
@@ -175,6 +191,7 @@ export const StudentsPage = () => {
       addPayment({
         studentId: selectedStudentForPayment.id,
         amount: amount,
+        method: paymentMethod,
         date: new Date().toISOString(),
         note: 'Dars uchun to\'lov',
         branchId: selectedStudentForPayment.branchId,
@@ -183,20 +200,33 @@ export const StudentsPage = () => {
       
       setPaymentModalOpen(false);
       setPaymentAmount('');
+      setPaymentMethod('naqd');
       setSelectedStudentForPayment(null);
     }
   };
+
+  useEffect(() => {
+    if (selectedInstructorId) {
+      api.getPracticeGroups(selectedInstructorId).then(groups => {
+        setInstructorGroups(groups.filter((g: any) => g.status === 'active'));
+      });
+    } else {
+      setInstructorGroups([]);
+    }
+  }, [selectedInstructorId]);
 
   const handleAssignInstructorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedStudentForAssign && selectedInstructorId) {
       await updateStudent(selectedStudentForAssign.id, {
         instructorId: selectedInstructorId,
+        practiceGroupId: practiceGroupId || undefined
       });
       alert("Instruktorga muvaffaqiyatli biriktirildi!");
       setIsAssignModalOpen(false);
       setSelectedStudentForAssign(null);
       setSelectedInstructorId('');
+      setPracticeGroupId('');
     }
   };
 
@@ -216,17 +246,25 @@ export const StudentsPage = () => {
   };
 
   const handleExport = () => {
-    const exportData = filteredStudents.map(s => ({
-      'Ism': s.firstName,
-      'Familiya': s.lastName,
-      'Telefon': s.phone,
-      'Guruh': getGroupName(s.groupId),
-      'Kurs Narxi': s.coursePrice,
-      'To\'langan': s.paidAmount,
-      'Qarzdorlik': s.coursePrice - s.paidAmount,
-      'Holati': s.status
-    }));
-    exportToCSV(exportData, `Oquvchilar_${new Date().toISOString().split('T')[0]}`);
+    exportToExcel({
+      data: filteredStudents.map(s => ({
+        ...s,
+        groupName: getGroupName(s.groupId),
+        debt: s.coursePrice - s.paidAmount
+      })),
+      columns: [
+        { header: 'Ism', key: 'firstName' },
+        { header: 'Familiya', key: 'lastName' },
+        { header: 'Telefon', key: 'phone' },
+        { header: 'Guruh', key: 'groupName' },
+        { header: 'Kurs Narxi', key: 'coursePrice' },
+        { header: "To'langan", key: 'paidAmount' },
+        { header: 'Qarzdorlik', key: 'debt' },
+        { header: 'Holati', key: 'status' }
+      ],
+      fileName: 'oquvchilar_hisoboti',
+      sheetName: 'Oquvchilar'
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -242,36 +280,6 @@ export const StudentsPage = () => {
     }
   };
 
-  const handleSendSMS = (studentId: string) => {
-    setSimulatedSMS(prev => ({ ...prev, [studentId]: 'sending' }));
-    setTimeout(() => {
-      setSimulatedSMS(prev => ({ ...prev, [studentId]: 'sent' }));
-    }, 1500);
-  };
-
-  const handleBulkSMS = () => {
-    const studentsWithDebt = filteredStudents.filter(s => (s.coursePrice - s.paidAmount) > 0);
-    if (studentsWithDebt.length === 0) {
-      alert("Hozirda qarzdor o'quvchilar yo'q.");
-      return;
-    }
-    
-    setIsBulkSending(true);
-    
-    // Simulate bulk sending
-    studentsWithDebt.forEach(s => {
-      setSimulatedSMS(prev => ({ ...prev, [s.id]: 'sending' }));
-    });
-    
-    setTimeout(() => {
-      studentsWithDebt.forEach(s => {
-        setSimulatedSMS(prev => ({ ...prev, [s.id]: 'sent' }));
-      });
-      setIsBulkSending(false);
-      alert(`${studentsWithDebt.length} ta qarzdor o'quvchiga SMS yuborildi!`);
-    }, 2500);
-  };
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -279,14 +287,10 @@ export const StudentsPage = () => {
           <h2 className="text-2xl font-bold text-text-primary">O'quvchilar</h2>
           <p className="text-text-muted">Barcha o'quvchilarni boshqarish</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Button variant="outline" className="gap-2 border-accent text-accent hover:bg-accent hover:text-white" onClick={handleBulkSMS} disabled={isBulkSending}>
-            <IconMessageCircle size={18} />
-            {isBulkSending ? "Yuborilmoqda..." : "Qarzdorlarga SMS (Barchaga)"}
-          </Button>
+        <div className="flex gap-2">
           <Button variant="outline" className="gap-2" onClick={handleExport}>
             <IconDownload size={18} />
-            Eksport (CSV)
+            Eksport (Excel)
           </Button>
           <Button className="gap-2" onClick={handleOpenAddModal}>
             <IconPlus size={18} />
@@ -362,24 +366,6 @@ export const StudentsPage = () => {
                             <IconCash size={16} />
                           </Button>
                         )}
-                        {student.coursePrice - student.paidAmount > 0 && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-8 h-8 p-0 border-accent/20 text-accent hover:bg-accent hover:text-white"
-                            title="Qarz haqida SMS yuborish"
-                            onClick={() => handleSendSMS(student.id)}
-                            disabled={simulatedSMS[student.id] === 'sending'}
-                          >
-                            {simulatedSMS[student.id] === 'sending' ? (
-                              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full" />
-                            ) : simulatedSMS[student.id] === 'sent' ? (
-                              <IconCheck size={16} className="text-success" />
-                            ) : (
-                              <IconMessageCircle size={16} />
-                            )}
-                          </Button>
-                        )}
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -388,21 +374,15 @@ export const StudentsPage = () => {
                         >
                           <IconEdit size={16} />
                         </Button>
-                        {!student.instructorId && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-8 h-8 p-0 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white"
-                            title="Instruktorga biriktirish"
-                            onClick={() => {
-                              setSelectedStudentForAssign(student);
-                              setSelectedInstructorId('');
-                              setIsAssignModalOpen(true);
-                            }}
-                          >
-                            <IconCar size={16} />
-                          </Button>
-                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-8 h-8 p-0"
+                          title="Profilni ko'rish"
+                          onClick={() => navigate(`/admin/students/${student.id}`)}
+                        >
+                          <IconUser size={16} />
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -427,7 +407,15 @@ export const StudentsPage = () => {
             <Input label="Familiya" placeholder="O'quvchi familiyasi" error={errors.lastName?.message} {...register('lastName')} />
           </div>
           
-          <Input label="Telefon" placeholder="+998901234567" error={errors.phone?.message} {...register('phone')} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Telefon" placeholder="+998901234567" error={errors.phone?.message} {...register('phone')} />
+            <Input label="Qo'shimcha telefon (ixtiyoriy)" placeholder="+998..." error={errors.additionalPhone?.message} {...register('additionalPhone')} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="JSHSHR (ixtiyoriy)" placeholder="14 talik raqam" error={errors.pinfl?.message} {...register('pinfl')} />
+            <Input label="Pasport seriya va raqam (ixtiyoriy)" placeholder="AA1234567" error={errors.passport?.message} {...register('passport')} />
+          </div>
           
           {user?.role === 'superadmin' && (
             <div className="flex flex-col gap-1.5">
@@ -530,6 +518,24 @@ export const StudentsPage = () => {
               <span className="text-xs text-danger">Summa qarz miqdoridan oshmasligi kerak!</span>
             )}
           </div>
+          
+          <div className="flex flex-col gap-1.5 mt-2">
+            <label className="text-sm font-medium text-text-primary">To'lov turi</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="method" value="naqd" checked={paymentMethod === 'naqd'} onChange={() => setPaymentMethod('naqd')} className="text-accent" />
+                <span>Naqd</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="method" value="karta" checked={paymentMethod === 'karta'} onChange={() => setPaymentMethod('karta')} className="text-accent" />
+                <span>Karta</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="method" value="hisob" checked={paymentMethod === 'hisob'} onChange={() => setPaymentMethod('hisob')} className="text-accent" />
+                <span>Hisob raqam</span>
+              </label>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" type="button" onClick={() => setPaymentModalOpen(false)}>Bekor qilish</Button>
@@ -547,7 +553,7 @@ export const StudentsPage = () => {
         </form>
       </Modal>
 
-      <Modal isOpen={isAssignModalOpen} onClose={() => { setIsAssignModalOpen(false); setSelectedStudentForAssign(null); }} title="Amaliyotga biriktirish">
+      <Modal isOpen={isAssignModalOpen} onClose={() => { setIsAssignModalOpen(false); setSelectedStudentForAssign(null); setPracticeGroupId(''); }} title="Amaliyotga biriktirish">
         <form onSubmit={handleAssignInstructorSubmit} className="space-y-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-text-primary">Instruktorni tanlang</label>
@@ -559,12 +565,33 @@ export const StudentsPage = () => {
             >
               <option value="">Instruktorni tanlang</option>
               {instructors
-                .filter(i => selectedStudentForAssign ? i.branchId === selectedStudentForAssign.branchId : true)
+                .filter(i => {
+                  if (user?.role === 'superadmin' && selectedStudentForAssign) {
+                    return i.branchId === selectedStudentForAssign.branchId;
+                  }
+                  return true;
+                })
                 .map(i => (
                 <option key={i.id} value={i.id}>{i.name} ({i.carModel} - {i.transmission === 'auto' ? 'Avtomat' : 'Mexanika'})</option>
               ))}
             </select>
           </div>
+          
+          <div className="flex flex-col gap-1.5 mt-2">
+            <label className="text-sm font-medium text-text-primary">Amaliyot guruhi (Ixtiyoriy)</label>
+            <select
+              className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors"
+              value={practiceGroupId}
+              onChange={(e) => setPracticeGroupId(e.target.value)}
+              disabled={!selectedInstructorId}
+            >
+              <option value="">Guruhsiz</option>
+              {instructorGroups.map((g: any) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setIsAssignModalOpen(false)}>Bekor qilish</Button>
             <Button type="submit" disabled={!selectedInstructorId}>Biriktirish</Button>

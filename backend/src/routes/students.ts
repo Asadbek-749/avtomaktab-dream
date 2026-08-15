@@ -6,9 +6,14 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: any) => {
   try {
-    const students = await prisma.student.findMany();
+    const user = req.user;
+    const whereClause = user.role === 'superadmin' ? {} : { branchId: user.branchId };
+    const students = await prisma.student.findMany({ 
+      where: whereClause,
+      include: { group: true }
+    });
     res.json(students);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -34,7 +39,11 @@ router.post('/', authorize('superadmin', 'admin'), async (req, res) => {
       providedDocuments,
       drivingHoursRequired,
       drivingHoursDone,
-      transmissionPreference
+      transmissionPreference,
+      pinfl,
+      passport,
+      additionalPhone,
+      practiceGroupId
     } = req.body;
 
     const studentData: any = {
@@ -60,6 +69,18 @@ router.post('/', authorize('superadmin', 'admin'), async (req, res) => {
     }
     if (providedDocuments) {
       studentData.providedDocuments = providedDocuments;
+    }
+    if (practiceGroupId !== undefined) {
+      studentData.practiceGroupId = practiceGroupId;
+    }
+    if (pinfl) {
+      studentData.pinfl = pinfl;
+    }
+    if (passport) {
+      studentData.passport = passport;
+    }
+    if (additionalPhone) {
+      studentData.additionalPhone = additionalPhone;
     }
 
     const student = await prisma.student.create({
@@ -97,7 +118,12 @@ router.put('/:id', authorize('superadmin', 'admin'), async (req, res) => {
       providedDocuments,
       drivingHoursRequired,
       drivingHoursDone,
-      transmissionPreference
+      transmissionPreference,
+      pinfl,
+      passport,
+      additionalPhone,
+      practiceGroupId,
+      practiceStatus
     } = req.body;
 
     const updateData: any = {};
@@ -116,6 +142,11 @@ router.put('/:id', authorize('superadmin', 'admin'), async (req, res) => {
     if (drivingHoursRequired !== undefined) updateData.drivingHoursRequired = parseFloat(drivingHoursRequired);
     if (drivingHoursDone !== undefined) updateData.drivingHoursDone = parseFloat(drivingHoursDone);
     if (transmissionPreference !== undefined) updateData.transmissionPreference = transmissionPreference;
+    if (pinfl !== undefined) updateData.pinfl = pinfl;
+    if (passport !== undefined) updateData.passport = passport;
+    if (additionalPhone !== undefined) updateData.additionalPhone = additionalPhone;
+    if (practiceGroupId !== undefined) updateData.practiceGroupId = practiceGroupId;
+    if (practiceStatus !== undefined) updateData.practiceStatus = practiceStatus;
 
     const student = await prisma.student.update({
       where: { id: req.params.id as string },
@@ -130,6 +161,18 @@ router.put('/:id', authorize('superadmin', 'admin'), async (req, res) => {
       message: 'Server error',
       error: (error as any).message
     });
+  }
+});
+router.delete('/:id', authorize('superadmin', 'admin'), async (req, res) => {
+  try {
+    const studentId = req.params.id as string;
+    await prisma.student.delete({
+      where: { id: studentId }
+    });
+    res.json({ message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

@@ -38,7 +38,15 @@ export const useUserStore = create<UserState>((set, get) => ({
       await api.deleteUser(id);
       const users = await api.getUsers();
       set({ users });
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      const msg = e.response?.data?.message;
+      if (msg) {
+        alert(msg);
+      } else {
+        alert("Xatolik yuz berdi. Xodimni o'chirib bo'lmaydi.");
+      }
+      console.error("DELETE ERROR:", e);
+    }
   },
   toggleUserStatus: async (id) => {
     const user = get().users.find(u => u.id === id);

@@ -24,19 +24,19 @@
   }
 
   .dark {
-    /* Dark mode - Luxury Gold & Black */
-    --bg-base: #090909;
-    --bg-card: rgba(18, 18, 18, 0.85);
-    --bg-hover: #1F1F1F;
-    --border: rgba(247, 200, 74, 0.15);
-    --text-primary: #FAFAFA;
-    --text-secondary: #E4E4E7;
-    --text-muted: #A1A1AA;
+    /* Dark mode - Navy & Blue Tech */
+    --bg-base: #061224; /* Deep Navy */
+    --bg-card: rgba(16, 25, 48, 0.85);
+    --bg-hover: #1B2745;
+    --border: rgba(59, 130, 246, 0.15); /* Blue-500 tint */
+    --text-primary: #FFFFFF;
+    --text-secondary: #CBD5E1; /* Lighter slate-300 */
+    --text-muted: #94A3B8; /* Slate-400 */
     
-    /* Luxury Gold Accents for Dark Mode */
-    --accent: #F7C84A;
-    --accent-hover: #C98A16;
-    --accent-bg: rgba(247, 200, 74, 0.15);
+    /* Tech Blue Accents for Dark Mode */
+    --accent: #3B82F6; /* Tailwind Blue-500 */
+    --accent-hover: #2563EB; /* Tailwind Blue-600 */
+    --accent-bg: rgba(59, 130, 246, 0.15);
   }
 
   body {
@@ -47,8 +47,8 @@
   }
 
   .dark body {
-    background-image: radial-gradient(circle at 100% 0%, rgba(247, 200, 74, 0.05) 0%, transparent 40%),
-                      radial-gradient(circle at 0% 100%, rgba(201, 138, 22, 0.04) 0%, transparent 40%);
+    background-image: radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                      radial-gradient(circle at 0% 100%, rgba(14, 165, 233, 0.05) 0%, transparent 40%);
   }
 
   /* Fix for browser autofill in dark mode */
@@ -56,7 +56,7 @@
   .dark input:-webkit-autofill:hover, 
   .dark input:-webkit-autofill:focus, 
   .dark input:-webkit-autofill:active {
-      -webkit-box-shadow: 0 0 0 30px #121212 inset !important;
+      -webkit-box-shadow: 0 0 0 30px #061224 inset !important;
       -webkit-text-fill-color: white !important;
       transition: background-color 5000s ease-in-out 0s;
   }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AppRouter } from './router';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   // Initialize theme from localStorage
@@ -12,9 +13,11 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <AppRouter />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppRouter />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

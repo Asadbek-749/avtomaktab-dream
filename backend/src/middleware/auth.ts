@@ -15,7 +15,10 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123') as any;
+      if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is not defined');
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET) as any;
       req.user = {
         id: decoded.id,
         role: decoded.role,

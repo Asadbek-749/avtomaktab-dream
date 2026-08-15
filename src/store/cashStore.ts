@@ -16,12 +16,12 @@ export const useCashStore = create<CashState>((set) => ({
     set({ reports });
   },
   addReport: async (totalAmount, addedBy, branchId) => {
-    // await api.addCashReport(totalAmount, addedBy, branchId);
+    await api.addCashReport(totalAmount, addedBy, branchId);
     const reports = await api.getCashReports();
     set({ reports });
   },
   updateReportStatus: async (id, status, superadminId) => {
-    // await api.updateCashReport(id, status, superadminId);
+    await api.updateCashReport(id, status, superadminId);
     const reports = await api.getCashReports();
     set({ reports });
   }

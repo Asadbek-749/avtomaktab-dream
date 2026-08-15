@@ -7,6 +7,7 @@ interface StudentState {
   fetchStudents: () => Promise<void>;
   addStudent: (data: Omit<Student, 'id' | 'createdAt'>) => Promise<void>;
   updateStudent: (id: string, data: Partial<Student>) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
 }
 
 export const useStudentStore = create<StudentState>((set) => ({
@@ -39,5 +40,11 @@ export const useStudentStore = create<StudentState>((set) => ({
       const students = await api.getStudents();
       set({ students });
     } catch (e) { console.error(e); }
+  },
+  deleteStudent: async (id) => {
+    try {
+      await api.deleteStudent(id);
+      set(state => ({ students: state.students.filter(s => s.id !== id) }));
+    } catch (e) { console.error(e); throw e; }
   }
 }));

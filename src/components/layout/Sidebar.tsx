@@ -27,12 +27,10 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
   const user = useAuthStore(state => state.user);
 
   const navItems = [
-    { name: 'Dashboard', path: `/${user?.role}/dashboard`, icon: IconDashboard },
+    { name: 'Umumiy hisobot', path: `/${user?.role}/dashboard`, icon: IconDashboard },
     ...(user?.role === 'admin' ? [
-      { name: 'O\'quvchilar', path: '/admin/students', icon: IconUsers },
       { name: 'Guruhlar', path: '/admin/groups', icon: IconBooks },
-      { name: 'Instruktorlar', path: '/admin/instructors', icon: IconBuildingCommunity }, // Reusing icon or better IconSteeringWheel if we had it, let's use IconUsers for now or add new. Let's use IconSettings for now or IconChartBar
-      { name: 'To\'lovlar', path: '/admin/payments', icon: IconCreditCard },
+      { name: 'Instruktorlar', path: '/admin/instructors', icon: IconUsers },
       { name: 'Hujjatlar', path: '/admin/documents', icon: IconFileAlert },
       { name: 'Jadval', path: '/admin/schedule', icon: IconCalendarEvent },
       { name: 'Davomat', path: '/admin/reports', icon: IconChartBar },
@@ -41,8 +39,6 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
     ...(user?.role === 'superadmin' ? [
       { name: 'Filiallar', path: '/superadmin/branches', icon: IconBuildingCommunity },
       { name: 'Instruktorlar', path: '/superadmin/instructors', icon: IconUsers },
-      { name: 'Analitika', path: '/superadmin/analytics', icon: IconChartBar },
-      { name: 'Moliya', path: '/superadmin/finance', icon: IconCash },
       { name: 'Hujjatlar', path: '/superadmin/documents', icon: IconFileAlert },
       { name: 'Davomat', path: '/superadmin/reports', icon: IconBooks },
       { name: 'Adminlar', path: '/superadmin/admins', icon: IconUsers },
@@ -66,22 +62,22 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
     )}>
       <div className={cn("h-32 flex items-center justify-center border-b border-border/50 transition-all duration-300 relative", isCollapsed ? "px-0" : "px-4 overflow-hidden")}>
         <div className={cn("transition-all duration-300 whitespace-nowrap flex items-center justify-center w-full h-full", isCollapsed ? "opacity-0 w-0 hidden" : "opacity-100 w-auto")}>
-          <img src="/assets/logo-light.png" className="block dark:hidden h-32 w-auto object-contain scale-125 transition-transform duration-300" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Avtomaktab Logo" />
-          <img src="/assets/logo-dark.png" className="hidden dark:block h-32 w-auto object-contain scale-125 transition-transform duration-300" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Avtomaktab Logo" />
+          <img src="/assets/logo-light.png" className="block dark:hidden h-32 w-auto object-contain scale-125 transition-transform duration-300 hover:scale-[1.3]" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Avtomaktab Logo" />
+          <img src="/assets/logo-dark.png" className="hidden dark:block h-32 w-auto object-contain scale-[1.6] transition-transform duration-300 hover:scale-[1.65]" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Avtomaktab Logo" />
         </div>
         {isCollapsed && (
-          <div className="absolute flex items-center justify-center w-full h-full left-0">
-            <img src="/assets/logo-light.png" className="block dark:hidden h-20 w-auto object-contain" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Logo" />
-            <img src="/assets/logo-dark.png" className="hidden dark:block h-20 w-auto object-contain" style={{ clipPath: 'inset(0 0 8% 0)' }} alt="Logo" />
+          <div className="absolute flex items-center justify-center w-full h-full left-0 p-3">
+            <img src="/assets/logo-light.png" className="block dark:hidden h-full w-auto object-contain" alt="Logo" />
+            <img src="/assets/logo-dark.png" className="hidden dark:block h-full w-auto object-contain" alt="Logo" />
           </div>
         )}
         {!isCollapsed && (
-          <button className="absolute top-4 right-4 md:hidden text-text-secondary hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-colors z-10" onClick={onClose}>
-            <IconX size={24} />
+          <button className="absolute top-4 right-4 md:hidden text-text-secondary hover:text-indigo-500 p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors z-10" onClick={onClose}>
+            <IconX size={20} />
           </button>
         )}
       </div>
-      <nav className="flex-1 overflow-y-auto pt-8 pb-6 overflow-x-hidden">
+      <nav className="flex-1 overflow-y-auto pt-6 pb-6 overflow-x-hidden custom-scrollbar">
         <ul className={cn("space-y-1.5", isCollapsed ? "px-2" : "px-4")}>
           {navItems.map((item) => (
             <li key={item.path}>
@@ -89,10 +85,10 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
                 to={item.path}
                 title={isCollapsed ? item.name : undefined}
                 className={({ isActive }) => cn(
-                  "flex items-center rounded-xl text-sm font-semibold transition-all duration-300 group",
-                  isCollapsed ? "justify-center p-3" : "gap-3.5 px-4 py-3 hover:translate-x-1",
+                  "flex items-center rounded-xl text-sm font-semibold transition-all duration-300 group relative overflow-hidden",
+                  isCollapsed ? "justify-center p-3" : "gap-3.5 px-4 py-3.5 hover:translate-x-1",
                   isActive 
-                    ? "bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)] text-[#090909] shadow-md shadow-[var(--accent)]/20" 
+                    ? "bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-white shadow-sm" 
                     : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
                 )}
                 onClick={() => {
@@ -101,16 +97,21 @@ export const Sidebar = ({ isMobileOpen, onClose, isCollapsed = false }: SidebarP
               >
                 {({ isActive }) => (
                   <>
+                    {isActive && (
+                      <div 
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-indigo-600 dark:bg-indigo-400 rounded-r-full"
+                      />
+                    )}
                     <item.icon 
                       size={isCollapsed ? 24 : 22} 
-                      stroke={isActive ? 2 : 1.5}
+                      stroke={isActive ? 2.5 : 1.5}
                       className={cn(
-                        "transition-colors duration-300 flex-shrink-0",
-                        isActive ? "text-[#090909]" : "text-text-muted group-hover:text-accent"
+                        "transition-colors duration-300 flex-shrink-0 relative z-10",
+                        isActive ? "text-indigo-600 dark:text-indigo-400" : "text-text-muted group-hover:text-indigo-500 dark:group-hover:text-indigo-400"
                       )} 
                     />
                     {!isCollapsed && (
-                      <span className="whitespace-nowrap transition-opacity duration-300">
+                      <span className="whitespace-nowrap transition-opacity duration-300 relative z-10">
                         {item.name}
                       </span>
                     )}

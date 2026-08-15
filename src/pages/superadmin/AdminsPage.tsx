@@ -14,6 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '../../components/ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const userSchema = z.object({
   name: z.string().min(3, "Ism kamida 3 ta harfdan iborat bo'lishi kerak"),
@@ -31,6 +32,7 @@ export const AdminsPage = () => {
   const { branches, fetchBranches } = useBranchStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [ConfirmDialog, confirm] = useConfirm();
 
   useEffect(() => {
     fetchUsers();
@@ -119,7 +121,7 @@ export const AdminsPage = () => {
             </TableHeader>
             <TableBody>
               {nonSuperAdmins.map((user, i) => (
-                <TableRow key={user.id} transition={{ delay: i * 0.05 }}>
+                <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.login}</TableCell>
                   <TableCell>{user.phone}</TableCell>
@@ -157,8 +159,8 @@ export const AdminsPage = () => {
                         size="sm" 
                         className="w-8 h-8 p-0"
                         title="O'chirish"
-                        onClick={() => {
-                          if(confirm("Haqiqatdan ham bu xodimni o'chirmoqchimisiz?")) deleteUser(user.id);
+                        onClick={async () => {
+                          if(await confirm("Haqiqatdan ham bu xodimni o'chirmoqchimisiz?")) deleteUser(user.id);
                         }}
                       >
                         <IconTrash size={16} className="text-danger" />
@@ -214,6 +216,7 @@ export const AdminsPage = () => {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog />
     </motion.div>
   );
 };

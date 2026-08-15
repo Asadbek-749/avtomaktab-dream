@@ -6,9 +6,11 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: any) => {
   try {
-    const groups = await prisma.group.findMany();
+    const user = req.user;
+    const whereClause = user.role === 'superadmin' ? {} : { branchId: user.branchId };
+    const groups = await prisma.group.findMany({ where: whereClause });
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

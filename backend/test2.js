@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const unassigned = await prisma.student.count({ where: { status: 'active', practiceStatus: { not: 'completed' }, OR: [ { instructorId: null }, { practiceGroupId: null } ] } }); console.log('Count:', unassigned); } main().finally(() => prisma.$disconnect());
