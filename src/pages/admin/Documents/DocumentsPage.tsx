@@ -10,6 +10,8 @@ export const DocumentsPage = () => {
   const { students, fetchStudents } = useStudentStore();
   const { groups, fetchGroups } = useGroupStore();
 
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
+
   useEffect(() => {
     fetchStudents();
     fetchGroups();
@@ -27,7 +29,7 @@ export const DocumentsPage = () => {
       hasPassport: docs.passport,
       isMissing: !docs.photo || !docs.form083 || !docs.passport
     };
-  }).filter(s => s.isMissing);
+  }).filter(s => s.isMissing && (selectedGroupId === 'all' || s.groupId === selectedGroupId));
 
   const getGroupName = (id: string) => {
     const group = groups.find(g => g.id === id);
@@ -36,9 +38,23 @@ export const DocumentsPage = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary">Hujjatlar Nazorati</h2>
-        <p className="text-text-muted">Guruhlardagi hujjat topshirmagan o'quvchilar</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary">Hujjatlar Nazorati</h2>
+          <p className="text-text-muted">Guruhlardagi hujjat topshirmagan o'quvchilar</p>
+        </div>
+        <div className="w-full sm:w-64">
+          <select
+            value={selectedGroupId}
+            onChange={(e) => setSelectedGroupId(e.target.value)}
+            className="w-full bg-bg-base border-2 border-border rounded-xl px-4 py-2 text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
+          >
+            <option value="all">Barcha guruhlar</option>
+            {groups.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-col gap-6">
@@ -61,9 +77,9 @@ export const DocumentsPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Ro'yxat</CardTitle>
+            <CardTitle>Ro'yxat {selectedGroupId !== 'all' && `(${getGroupName(selectedGroupId)})`}</CardTitle>
           </CardHeader>
-          <CardContent className="overflow-y-auto max-h-[600px] scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

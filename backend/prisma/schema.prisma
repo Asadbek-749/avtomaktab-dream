@@ -42,6 +42,8 @@ model User {
   
   instructorPaymentsReceived InstructorPayment[] @relation("InstructorPayments")
   instructorPaymentsAdded    InstructorPayment[] @relation("InstructorPaymentAdder")
+  
+  attendancesTaken           Attendance[] @relation("TeacherAttendances")
 }
 
 model Branch {
@@ -79,6 +81,7 @@ model Group {
   branch    Branch   @relation(fields: [branchId], references: [id])
 
   students  Student[]
+  attendances Attendance[]
 }
 
 model PracticeGroup {
@@ -146,6 +149,7 @@ model Student {
   payments  Payment[]
   drivingLessons DrivingLesson[]
   practiceAssignments PracticeAssignment[]
+  attendanceRecords AttendanceRecord[]
 }
 
 model Payment {
@@ -297,3 +301,32 @@ model InstructorPayment {
   @@index([instructorId, date])
 }
 
+model Attendance {
+  id        String   @id @default(uuid())
+  date      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  teacherId String
+  teacher   User     @relation("TeacherAttendances", fields: [teacherId], references: [id])
+
+  records   AttendanceRecord[]
+
+  @@unique([groupId, date])
+}
+
+model AttendanceRecord {
+  id           String   @id @default(uuid())
+  present      Boolean  @default(true)
+  
+  attendanceId String
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceId, studentId])
+}

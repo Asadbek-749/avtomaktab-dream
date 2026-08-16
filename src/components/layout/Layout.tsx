@@ -39,7 +39,7 @@ export const Layout = () => {
       <div className="flex flex-col flex-1 overflow-hidden w-full relative z-0">
         <Header onMenuClick={handleMenuClick} />
         <main className="flex-1 overflow-y-auto p-6 pt-8 md:p-8 md:pt-10 w-full">
-          <div className="max-w-7xl mx-auto w-full h-full">
+          <div className="max-w-[1150px] mx-auto w-full h-full">
               <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={location.pathname}

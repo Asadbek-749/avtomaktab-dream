@@ -138,7 +138,12 @@ class ApiService {
   
   // --- Attendance (mocking) ---
   async getAttendances(): Promise<Attendance[]> {
-    return [];
+    const res = await apiInstance.get('/attendance');
+    return res.data;
+  }
+  async addAttendance(data: Omit<Attendance, 'id' | 'createdAt'>): Promise<Attendance> {
+    const res = await apiInstance.post('/attendance', data);
+    return res.data;
   }
 
   // --- Driving Lessons ---

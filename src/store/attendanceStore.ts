@@ -15,7 +15,7 @@ export const useAttendanceStore = create<AttendanceState>((set) => ({
     set({ attendances });
   },
   addAttendance: async (data) => {
-    // await api.addAttendance(data);
+    await api.addAttendance(data);
     const attendances = await api.getAttendances();
     set({ attendances });
   }

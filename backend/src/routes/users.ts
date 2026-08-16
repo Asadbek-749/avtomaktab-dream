@@ -78,7 +78,9 @@ router.put('/:id', authorize('superadmin', 'admin'), async (req: any, res: any) 
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (currentUser.role === 'admin') {
+    const isSelfEdit = currentUser.id === existingUser.id;
+
+    if (currentUser.role === 'admin' && !isSelfEdit) {
       if (existingUser.role === 'superadmin' || existingUser.role === 'admin') {
         return res.status(403).json({ message: 'Admins cannot edit superadmins or other admins' });
       }
@@ -97,15 +99,25 @@ router.put('/:id', authorize('superadmin', 'admin'), async (req: any, res: any) 
     if (name !== undefined) updateData.name = name;
     if (login !== undefined) updateData.login = login;
     if (phone !== undefined) updateData.phone = phone;
-    if (role !== undefined) updateData.role = role;
-    if (branchId !== undefined) updateData.branchId = branchId || null;
-    if (isActive !== undefined) updateData.isActive = isActive;
+    // Don't allow users to change their own role or branch directly, unless they are superadmin
+    if (role !== undefined && (!isSelfEdit || currentUser.role === 'superadmin')) updateData.role = role;
+    if (branchId !== undefined && (!isSelfEdit || currentUser.role === 'superadmin')) updateData.branchId = branchId || null;
+    if (isActive !== undefined && (!isSelfEdit || currentUser.role === 'superadmin')) updateData.isActive = isActive;
     if (carModel !== undefined) updateData.carModel = carModel;
     if (carNumber !== undefined) updateData.carNumber = carNumber;
     if (transmission !== undefined) updateData.transmission = transmission;
     if (studentPrice !== undefined) updateData.studentPrice = studentPrice ? parseFloat(studentPrice as string) : null;
     
     if (password) {
+      // If changing password, optionally require currentPassword
+      const { currentPassword } = req.body;
+      if (isSelfEdit && currentPassword) {
+         const isMatch = await bcrypt.compare(currentPassword, existingUser.passwordHash);
+         if (!isMatch) {
+            return res.status(400).json({ message: 'Eski parol noto\'g\'ri kiritildi' });
+         }
+      }
+      
       const salt = await bcrypt.genSalt(10);
       updateData.passwordHash = await bcrypt.hash(password, salt);
     }

@@ -152,12 +152,14 @@ export const MyGroups = () => {
             </div>
           </div>
 
-          <div className="space-y-3 mt-4 max-h-[60vh] overflow-y-auto px-1">
+          <div className="space-y-3 mt-4 max-h-[50vh] overflow-y-auto px-1 custom-scrollbar">
             {selectedGroup && students.filter(s => s.groupId === selectedGroup.id).map(student => (
               <div key={student.id} className="flex items-center justify-between p-4 bg-bg-base border border-border rounded-xl hover:border-accent/50 transition-colors">
                 <div className="flex flex-col">
-                  <span className="font-bold text-text-primary text-lg">{student.firstName} {student.lastName}</span>
-                  <span className="text-sm text-text-muted">{student.phone}</span>
+                  <span className="font-bold text-text-primary text-base">
+                    {student.firstName} {student.lastName}
+                  </span>
+                  <span className="text-sm text-text-muted mt-0.5">{student.phone}</span>
                 </div>
                 <button 
                   onClick={() => toggleStudentAttendance(student.id)}
@@ -177,7 +179,7 @@ export const MyGroups = () => {
             )}
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
             <Button variant="outline" onClick={() => setAttendanceModalOpen(false)}>Bekor qilish</Button>
             <Button onClick={saveAttendance}>Saqlash</Button>
           </div>

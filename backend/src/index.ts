@@ -34,6 +34,7 @@ import expenseRoutes from './routes/expenses';
 import cashReportsRoutes from './routes/cash-reports';
 import instructorPaymentRoutes from './routes/instructorPayments';
 import practiceGroupRoutes from './routes/practiceGroups';
+import attendanceRoutes from './routes/attendance';
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -48,6 +49,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/cash-reports', cashReportsRoutes);
 app.use('/api/instructor-payments', instructorPaymentRoutes);
 app.use('/api/practice-groups', practiceGroupRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {

@@ -497,9 +497,6 @@ export const AdminDashboard = () => {
             <CardContent className="p-6 flex flex-col justify-between h-full relative z-10 min-h-[160px]">
               <div className="flex items-start justify-between">
                 <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Jami tushum</h3>
-                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <IconTrendingUp size={20} stroke={2.5} />
-                </div>
               </div>
               <div className="mt-4">
                 <p className="text-3xl font-black text-text-primary tracking-tight">
@@ -534,9 +531,6 @@ export const AdminDashboard = () => {
             <CardContent className="p-6 flex flex-col justify-between h-full relative z-10 min-h-[160px]">
               <div className="flex items-start justify-between">
                 <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Jami xarajat</h3>
-                <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                  <IconTrendingDown size={20} stroke={2.5} />
-                </div>
               </div>
               <div className="mt-4">
                 <p className="text-3xl font-black text-text-primary tracking-tight">
@@ -555,9 +549,6 @@ export const AdminDashboard = () => {
             <CardContent className="p-6 flex flex-col justify-between h-full relative z-10 min-h-[160px]">
               <div className="flex items-start justify-between">
                 <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Sof foyda</h3>
-                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <IconWallet size={20} stroke={2.5} />
-                </div>
               </div>
               <div className="mt-4">
                 <p className={cn("text-3xl font-black tracking-tight", netProfit >= 0 ? "text-indigo-600 dark:text-indigo-400" : "text-rose-600 dark:text-rose-400")}>
@@ -576,9 +567,6 @@ export const AdminDashboard = () => {
             <CardContent className="p-6 flex flex-col justify-between h-full relative z-10 min-h-[160px]">
               <div className="flex items-start justify-between">
                 <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider">Qarzdorlik</h3>
-                <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <IconAlertCircle size={20} stroke={2.5} />
-                </div>
               </div>
               <div className="mt-4">
                 <p className="text-3xl font-black text-amber-600 dark:text-amber-500 tracking-tight">
