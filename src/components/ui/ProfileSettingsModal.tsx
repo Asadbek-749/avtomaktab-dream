@@ -13,6 +13,7 @@ const profileSchema = z.object({
   name: z.string().min(3, "Ism kamida 3 ta harfdan iborat bo'lishi kerak"),
   login: z.string().min(3, "Login kamida 3 ta belgi bo'lishi kerak"),
   phone: z.string().min(9, "Telefon raqam xato"),
+  currentPassword: z.string().optional(),
   newPassword: z.string().optional(),
 }).refine((data) => {
   if (data.newPassword && data.newPassword.length > 0 && data.newPassword.length < 6) {
