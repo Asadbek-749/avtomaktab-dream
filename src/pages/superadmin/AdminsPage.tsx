@@ -26,12 +26,12 @@ const userSchema = z.object({
 });
 
 type UserForm = z.infer<typeof userSchema>;
-
 export const AdminsPage = () => {
   const { users, fetchUsers, addUser, updateUser, deleteUser, toggleUserStatus } = useUserStore();
   const { branches, fetchBranches } = useBranchStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [ConfirmDialog, confirm] = useConfirm();
 
   useEffect(() => {
@@ -41,54 +41,71 @@ export const AdminsPage = () => {
 
   const nonSuperAdmins = users.filter(u => u.role !== 'superadmin');
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<UserForm>({
-    resolver: zodResolver(userSchema),
+  // Schema for add vs edit (password optional on edit)
+  const schema = z.object({
+    name: z.string().min(3, "Ism kamida 3 ta harfdan iborat bo'lishi kerak"),
+    login: z.string().min(3, "Login kamida 3 ta belgi bo'lishi kerak"),
+    phone: z.string().min(9, "Telefon raqam xato"),
+    password: editingUser 
+      ? z.string().optional().or(z.literal(''))
+      : z.string().min(6, "Parol kamida 6 ta belgi bo'lishi kerak"),
+    role: z.enum(['admin', 'teacher'] as const),
+    branchId: z.string().min(1, "Filial tanlang")
+  });
+
+  type FormData = z.infer<typeof schema>;
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
     defaultValues: { role: 'admin' }
   });
 
   const handleOpenAddModal = () => {
     setEditingUser(null);
+    setShowPassword(false);
     reset({ name: '', login: '', phone: '', password: '', role: 'admin', branchId: '' });
     setIsModalOpen(true);
   };
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
+    setShowPassword(false);
     reset({
       name: user.name,
       login: user.login,
       phone: user.phone,
-      password: user.password,
+      password: '', // do not populate password on edit
       role: user.role,
-      branchId: user.branchId
+      branchId: user.branchId || ''
     });
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: UserForm) => {
-    if (editingUser) {
-      updateUser(editingUser.id, {
-        name: data.name,
-        login: data.login,
-        phone: data.phone,
-        password: data.password,
-        role: data.role as Role,
-        branchId: data.branchId
-      });
-    } else {
-      addUser({
-        name: data.name,
-        login: data.login,
-        phone: data.phone,
-        password: data.password,
-        role: data.role as Role,
-        branchId: data.branchId,
-        isActive: true
-      });
+  const onSubmit = async (data: FormData) => {
+    const payload: any = {
+      name: data.name,
+      login: data.login,
+      phone: data.phone,
+      role: data.role as Role,
+      branchId: data.branchId
+    };
+    if (data.password) {
+      payload.password = data.password;
     }
-    setIsModalOpen(false);
-    setEditingUser(null);
-    reset();
+
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.id, payload);
+      } else {
+        payload.isActive = true;
+        await addUser(payload);
+      }
+      setIsModalOpen(false);
+      setEditingUser(null);
+      reset();
+    } catch (error) {
+      // Error is handled in store via alert
+    }
   };
 
   return (
@@ -98,15 +115,16 @@ export const AdminsPage = () => {
           <h2 className="text-2xl font-bold text-text-primary">Adminlar</h2>
           <p className="text-text-muted">Tizimdagi adminlar va o'qituvchilarni boshqarish</p>
         </div>
-        <Button className="gap-2" onClick={handleOpenAddModal}>
-          <IconPlus size={18} />Xodim qo'shish</Button>
+        <Button onClick={handleOpenAddModal} className="flex items-center gap-2">
+          <IconPlus size={18} />Xodim qo'shish
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Xodimlar ro'yxati</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -120,22 +138,28 @@ export const AdminsPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {nonSuperAdmins.map((user, i) => (
+              {nonSuperAdmins.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="font-medium text-text-primary">{user.name}</TableCell>
                   <TableCell>{user.login}</TableCell>
                   <TableCell>{user.phone}</TableCell>
-                  <TableCell>{branches.find(b => b.id === user.branchId)?.name || "Biriktirilmagan"}</TableCell>
-                  <TableCell className="capitalize">{user.role}</TableCell>
+                  <TableCell>{branches.find(b => b.id === user.branchId)?.name || '-'}</TableCell>
                   <TableCell>
-                    {user.isActive ? (
-                      <span className="px-2 py-1 bg-success/10 text-success text-xs rounded-full">Faol</span>
-                    ) : (
-                      <span className="px-2 py-1 bg-danger/10 text-danger text-xs rounded-full">Bloklangan</span>
-                    )}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                      ${user.role === 'admin' ? 'bg-accent/10 text-accent' : 'bg-success/10 text-success'}
+                    `}>
+                      {user.role}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                      ${user.isActive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}
+                    `}>
+                      {user.isActive ? 'Faol' : 'Bloklangan'}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex justify-end gap-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -180,7 +204,22 @@ export const AdminsPage = () => {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Login" placeholder="Login" error={errors.login?.message} {...register('login')} />
-            <Input label="Parol" type="password" placeholder="***" error={errors.password?.message} {...register('password')} />
+            <div className="relative">
+              <Input 
+                label="Parol" 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder={editingUser ? 'O\'zgartirish uchun yangi parol' : 'Kamida 6 ta belgi'} 
+                error={errors.password?.message} 
+                {...register('password')} 
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-[34px] text-text-muted hover:text-text-primary transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <IconLockOpen size={18} /> : <IconLock size={18} />}
+              </button>
+            </div>
           </div>
           
           <Input label="Telefon" placeholder="+998901234567" error={errors.phone?.message} {...register('phone')} />

@@ -24,14 +24,22 @@ export const useUserStore = create<UserState>((set, get) => ({
       await api.addUser(data);
       const users = await api.getUsers();
       set({ users });
-    } catch (e) { console.error(e); }
+    } catch (e: any) { 
+      console.error(e);
+      alert(e.response?.data?.message || 'Xodim qo\'shishda xatolik yuz berdi');
+      throw e;
+    }
   },
   updateUser: async (id, data) => {
     try {
       await api.updateUser(id, data);
       const users = await api.getUsers();
       set({ users });
-    } catch (e) { console.error(e); }
+    } catch (e: any) { 
+      console.error(e);
+      alert(e.response?.data?.message || 'Xodimni saqlashda xatolik yuz berdi');
+      throw e;
+    }
   },
   deleteUser: async (id) => {
     try {
